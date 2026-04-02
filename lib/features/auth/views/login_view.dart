@@ -4,6 +4,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/auth_provider.dart';
 import 'register_view.dart';
 
+import '../../elderly/views/elderly_home_view.dart';
+import '../../caregiver/views/caregiver_home_view.dart';
+
 class LoginView extends ConsumerStatefulWidget {
   const LoginView({super.key});
 
@@ -36,6 +39,20 @@ class _LoginViewState extends ConsumerState<LoginView> {
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
+
+    if (authState.user != null) {
+    final user = authState.user!;
+    if (user.role == 'elderly') {
+      return const ElderlyHomeView(); 
+    } else if (user.role == 'caregiver') {
+      return const CaregiverHomeView(); 
+    } else {
+      // Fallback for 'family' role (cite: 94)
+      return const Scaffold(
+        body: Center(child: Text("Family Dashboard Coming Soon")),
+      );
+    }
+  }
 
     return Scaffold(
       body: SafeArea(
