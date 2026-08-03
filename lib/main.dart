@@ -15,7 +15,7 @@ class HomeCareApp extends StatelessWidget {
   Widget build(BuildContext context) {
     return MaterialApp(
       debugShowCheckedModeBanner: false,
-      title: 'Cloud Home Care',
+      title: 'HomeCare',
       theme: AppTheme.lightTheme,
       home: const LoginView(),
     );

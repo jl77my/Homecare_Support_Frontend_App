@@ -5,23 +5,27 @@ import '../services/auth_service.dart';
 
 class AuthState {
   final UserModel? user;
+  final String? token; // Added token field
   final bool isLoading;
   final String? errorMessage;
 
   const AuthState({
     this.user,
+    this.token,
     this.isLoading = false,
     this.errorMessage,
   });
 
   AuthState copyWith({
     UserModel? user,
+    String? token,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
   }) {
     return AuthState(
       user: user ?? this.user,
+      token: token ?? this.token, // Preserves or updates token
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
@@ -40,8 +44,15 @@ class AuthNotifier extends StateNotifier<AuthState> {
   Future<void> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
+      // 1. Fetch user model from auth service
       final user = await _authService.login(email: email, password: password);
-      state = AuthState(user: user);
+
+      // 2. Assign user directly without calling user.user
+      //    (Pass the token string if returned from your API or user model)
+      state = AuthState(
+        user: user,
+        token: user.id, // Using user Guid/ID or token string
+      );
     } catch (error) {
       state = AuthState(
         isLoading: false,
