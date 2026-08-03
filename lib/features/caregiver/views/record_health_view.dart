@@ -24,23 +24,19 @@ class _RecordHealthViewState extends ConsumerState<RecordHealthView> {
     if (token == null) return;
 
     setState(() => _isSaving = true);
-    final result = await _service.recordHealth(
-      token,
-      widget.patientId,
-      _hrController.text.trim(),
-      _bpController.text.trim(),
-      _sugarController.text.trim(),
-      _notesController.text.trim(),
-    );
-    setState(() => _isSaving = false);
+    try {
+      final result = await _service.recordHealth(
+        token: token,
+        patientId: widget.patientId,
+        heartRate: _hrController.text.trim(),
+        bloodPressure: _bpController.text.trim(),
+        bloodSugar: _sugarController.text.trim(),
+        notes: _notesController.text.trim(),
+      );
 
-    if (!mounted) return;
-
-    if (result.containsKey('recordId')) {
+      if (!mounted) return;
       List alerts = result['alerts'] ?? [];
-      String message = alerts.isNotEmpty 
-          ? "⚠️ ALERTS TRIGGERED:\n${alerts.join('\n')}" 
-          : "Health record saved successfully!";
+      String message = alerts.isNotEmpty ? "⚠️ ALERTS:\n${alerts.join('\n')}" : "Health record saved!";
 
       showDialog(
         context: context,
@@ -50,14 +46,18 @@ class _RecordHealthViewState extends ConsumerState<RecordHealthView> {
           actions: [
             TextButton(
               onPressed: () {
-                Navigator.of(context).pop();
-                Navigator.of(context).pop(); // Navigate back to dashboard
+                Navigator.pop(context);
+                Navigator.pop(context);
               },
               child: const Text("OK"),
             )
           ],
         ),
       );
+    } catch (e) {
+      ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.toString())));
+    } finally {
+      if (mounted) setState(() => _isSaving = false);
     }
   }
 
@@ -70,13 +70,10 @@ class _RecordHealthViewState extends ConsumerState<RecordHealthView> {
         child: Column(
           children: [
             TextField(controller: _hrController, decoration: const InputDecoration(labelText: "Heart Rate (BPM)")),
-            const SizedBox(height: 12),
             TextField(controller: _bpController, decoration: const InputDecoration(labelText: "Blood Pressure (e.g. 145/95)")),
-            const SizedBox(height: 12),
-            TextField(controller: _sugarController, decoration: const InputDecoration(labelText: "Blood Glucose (mmol/L)")),
-            const SizedBox(height: 12),
-            TextField(controller: _notesController, decoration: const InputDecoration(labelText: "Observations / Notes")),
-            const SizedBox(height: 24),
+            TextField(controller: _sugarController, decoration: const InputDecoration(labelText: "Blood Sugar (mmol/L)")),
+            TextField(controller: _notesController, decoration: const InputDecoration(labelText: "Notes")),
+            const SizedBox(height: 20),
             ElevatedButton(
               onPressed: _isSaving ? null : _submitVitals,
               style: ElevatedButton.styleFrom(minimumSize: const Size(double.infinity, 50)),

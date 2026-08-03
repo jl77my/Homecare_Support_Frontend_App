@@ -1,15 +1,22 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../auth/providers/auth_provider.dart';
+import 'record_health_view.dart';
+import 'schedule_medication_view.dart';
+import 'create_task_view.dart';
+import 'submit_report_view.dart';
+import 'caregiver_chat_view.dart';
 
 class CaregiverHomeView extends ConsumerWidget {
   const CaregiverHomeView({super.key});
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    const samplePatientId = "00000000-0000-0000-0000-000000000000";
+
     return Scaffold(
       appBar: AppBar(
-        title: const Text("Caregiver Dashboard"),
+        title: const Text("Caregiver Workspace"),
         actions: [
           IconButton(
             icon: const Icon(Icons.logout),
@@ -18,49 +25,43 @@ class CaregiverHomeView extends ConsumerWidget {
         ],
       ),
       body: ListView(
-        padding: const EdgeInsets.all(16),
+        padding: const EdgeInsets.all(16.0),
         children: [
-          _buildTaskSummaryCard(context),
-          const SizedBox(height: 20),
-          _buildActionTile(context, Icons.favorite, "Record Health Data", () {
-             // Navigate to Health Form (cite: 106, 466)
-          }),
-          _buildActionTile(context, Icons.assignment, "Daily Care Report", () {
-             // Navigate to Report Form (cite: 109, 470)
-          }),
-          _buildActionTile(context, Icons.chat, "Chat with Family", () {
-             // Navigate to In-app Chat (cite: 112, 465)
-          }),
+          ListTile(
+            leading: const Icon(Icons.assignment, color: Colors.blue),
+            title: const Text("1. Assign Care Task"),
+            subtitle: const Text("Create daily tasks for elderly or family"),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CreateTaskView(patientId: samplePatientId))),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.medication, color: Colors.purple),
+            title: const Text("2. Schedule Medication"),
+            subtitle: const Text("Set medication dosage and daily time"),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const ScheduleMedicationView(patientId: samplePatientId))),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.favorite, color: Colors.red),
+            title: const Text("3. Record Health Vitals"),
+            subtitle: const Text("Input HR, BP, Glucose and receive rule alerts"),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const RecordHealthView(patientId: samplePatientId))),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.note_add, color: Colors.orange),
+            title: const Text("4. Submit Care Report"),
+            subtitle: const Text("Log observations and upload photo evidence"),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const SubmitReportView(patientId: samplePatientId))),
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.chat, color: Colors.green),
+            title: const Text("5. In-App Chat"),
+            subtitle: const Text("Message family members directly"),
+            onTap: () => Navigator.push(context, MaterialPageRoute(builder: (_) => const CaregiverChatView(receiverId: samplePatientId))),
+          ),
         ],
-      ),
-    );
-  }
-
-  Widget _buildTaskSummaryCard(BuildContext context) {
-    return Card(
-      elevation: 4,
-      child: Padding(
-        padding: const EdgeInsets.all(16),
-        child: Column(
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Text("Today's Tasks", style: Theme.of(context).textTheme.headlineSmall),
-            const Divider(),
-            const Text("• Morning Medication (Pending)"),
-            const Text("• Physical Therapy (Pending)"),
-          ],
-        ),
-      ),
-    );
-  }
-
-  Widget _buildActionTile(BuildContext context, IconData icon, String title, VoidCallback onTap) {
-    return Card(
-      child: ListTile(
-        leading: Icon(icon, color: Theme.of(context).primaryColor),
-        title: Text(title),
-        trailing: const Icon(Icons.arrow_forward_ios, size: 16),
-        onTap: onTap,
       ),
     );
   }
