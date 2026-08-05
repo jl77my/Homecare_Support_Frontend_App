@@ -8,12 +8,12 @@ import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/views/auth_flow_view.dart';
 import 'features/caregiver/views/caregiver_status_view.dart';
 import 'features/caregiver/views/chat_view.dart';
+import 'features/caregiver/views/profile_view.dart';
 import 'features/caregiver/views/reports_view.dart';
+import 'features/caregiver/views/tasks_view.dart';
 import 'features/elderly/views/elderly_home_view.dart';
 import 'features/elderly/views/reminders_view.dart';
 import 'features/family/views/family_dashboard_view.dart';
-import 'features/caregiver/views/profile_view.dart';
-import 'features/caregiver/views/tasks_view.dart';
 
 void main() {
   runApp(
@@ -93,14 +93,18 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                       onPressed: () => _setActiveTab('reminders'),
                     ),
                   ],
-                  Padding(
-                    padding: const EdgeInsets.only(right: 16, left: 4),
-                    child: CircleAvatar(
-                      radius: 16,
-                      backgroundColor: const Color(0xFF0F172A),
-                      child: Text(
-                        user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                        style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                  // Clickable Top Profile Icon Navigating to ProfileView
+                  GestureDetector(
+                    onTap: () => _setActiveTab('profile'),
+                    child: Padding(
+                      padding: const EdgeInsets.only(right: 16, left: 4),
+                      child: CircleAvatar(
+                        radius: 16,
+                        backgroundColor: const Color(0xFF0F172A),
+                        child: Text(
+                          user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
+                          style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                        ),
                       ),
                     ),
                   ),
@@ -111,7 +115,7 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                   SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: user.role.toLowerCase() == 'elderly'
+                      child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile'
                           ? const ElderlyView()
                           : _buildMainContent(user.role),
                     ),

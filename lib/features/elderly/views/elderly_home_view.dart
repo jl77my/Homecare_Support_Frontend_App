@@ -3,7 +3,9 @@ import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/enums.dart';
 import '../../../core/models/models.dart';
+import '../../caregiver/views/profile_view.dart';
 import '../providers/elderly_provider.dart';
+import '../widgets/pairing_code_modal.dart';
 
 class ElderlyView extends ConsumerStatefulWidget {
   const ElderlyView({super.key});
@@ -18,7 +20,9 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(elderlyProvider.notifier).fetchReminders());
+    Future.microtask(() {
+      ref.read(elderlyProvider.notifier).fetchReminders();
+    });
   }
 
   void _logMood(String moodLabel) {
@@ -32,19 +36,128 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
     );
   }
 
+  void _showPairingCodeModal(BuildContext context) {
+    showModalBottomSheet(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
+      ),
+      builder: (context) => const PairingCodeModal(),
+    );
+  }
+
   @override
   Widget build(BuildContext context) {
     final state = ref.watch(elderlyProvider);
     final notifier = ref.read(elderlyProvider.notifier);
 
+    // Filter reminders safely based on selected category
     final reminders = _selectedCategoryFilter == null
         ? state.reminders
         : state.reminders.where((r) => r.category == _selectedCategoryFilter).toList();
 
+    return Scaffold(
+      backgroundColor: const Color(0xFFF8FAFC),
+      appBar: AppBar(
+        title: const Text(
+          'HomeCare Senior',
+          style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900),
+        ),
+        backgroundColor: Colors.white,
+        elevation: 0,
+        actions: [
+          // Profile Navigation Icon on Top Right
+          IconButton(
+            icon: const Icon(Icons.account_circle, size: 30, color: Color(0xFF2563EB)),
+            tooltip: 'View Profile',
+            onPressed: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => const ProfileView()),
+              );
+            },
+          ),
+          const SizedBox(width: 8),
+        ],
+      ),
+      body: state.isLoading
+          ? const Center(child: CircularProgressIndicator())
+          : state.isLinked == false
+              ? _buildUnlinkedOnboardingView(context)
+              : _buildActiveDashboardView(state, notifier, reminders),
+    );
+  }
+
+  // 1. Unlinked State: Displays ONLY Invitation Code Generator Card
+  Widget _buildUnlinkedOnboardingView(BuildContext context) {
     return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
+      padding: const EdgeInsets.all(24),
       children: [
-        // SOS Button
+        Container(
+          padding: const EdgeInsets.all(28),
+          decoration: BoxDecoration(
+            color: Colors.white,
+            borderRadius: BorderRadius.circular(36),
+            border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
+            boxShadow: const [
+              BoxShadow(
+                color: Color(0x0F000000),
+                blurRadius: 16,
+                offset: Offset(0, 4),
+              ),
+            ],
+          ),
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: const Color(0xFFEFF6FF),
+                  shape: BoxShape.circle,
+                  border: Border.all(color: const Color(0xFFBFDBFE), width: 2),
+                ),
+                child: const Icon(Icons.qr_code_2, size: 64, color: Color(0xFF2563EB)),
+              ),
+              const SizedBox(height: 20),
+              const Text(
+                'Welcome to HomeCare',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 24, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+              ),
+              const SizedBox(height: 8),
+              const Text(
+                'Generate an invitation code below to share with your caregiver or family members so they can connect with your account.',
+                textAlign: TextAlign.center,
+                style: TextStyle(fontSize: 14, color: Color(0xFF64748B), height: 1.5),
+              ),
+              const SizedBox(height: 28),
+              SizedBox(
+                width: double.infinity,
+                child: ElevatedButton.icon(
+                  onPressed: () => _showPairingCodeModal(context),
+                  icon: const Icon(Icons.key, size: 22),
+                  label: const Text('GENERATE INVITATION CODE', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 18),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+      ],
+    );
+  }
+
+  // 2. Linked State: Renders Full Active Home Dashboard
+  Widget _buildActiveDashboardView(ElderlyState state, ElderlyNotifier notifier, List<Reminder> reminders) {
+    return ListView(
+      padding: const EdgeInsets.all(16).copyWith(bottom: 32),
+      children: [
+        // SOS Emergency Button
         GestureDetector(
           onTap: () {
             if (state.isSosActive) {
@@ -192,7 +305,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
               ),
               const SizedBox(height: 16),
 
-              // Category Pills
+              // Category Filters
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -209,12 +322,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
               ),
               const SizedBox(height: 16),
 
-              if (state.isLoading)
-                const Padding(
-                  padding: EdgeInsets.symmetric(vertical: 32),
-                  child: Center(child: CircularProgressIndicator()),
-                )
-              else if (reminders.isEmpty)
+              if (reminders.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 32),
                   child: Center(
@@ -278,7 +386,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                     child: _buildFeelingButton(
                       emoji: '😊',
                       label: 'FEEL GREAT',
-                      moodValue: 'Happy', // Standardized payload
+                      moodValue: 'Happy',
                       bgColor: const Color(0xFFF0FDF4),
                       borderColor: const Color(0xFFBBF7D0),
                       textColor: const Color(0xFF166534),
@@ -289,7 +397,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                     child: _buildFeelingButton(
                       emoji: '😐',
                       label: 'OKAY',
-                      moodValue: 'Neutral', // Standardized payload
+                      moodValue: 'Neutral',
                       bgColor: const Color(0xFFFEFCE8),
                       borderColor: const Color(0xFFFEF08A),
                       textColor: const Color(0xFF854D0E),
@@ -300,14 +408,14 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                     child: _buildFeelingButton(
                       emoji: '😴',
                       label: 'TIRED',
-                      moodValue: 'Sad', // Standardized payload
+                      moodValue: 'Sad',
                       bgColor: const Color(0xFFFEF2F2),
                       borderColor: const Color(0xFFFECACA),
                       textColor: const Color(0xFF991B1B),
                     ),
                   ),
                 ],
-              )
+              ),
             ],
           ),
         ),
@@ -347,15 +455,6 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
           color: rem.isCompleted ? const Color(0xFFE2E8F0) : const Color(0xFF60A5FA),
           width: rem.isCompleted ? 1.5 : 2.5,
         ),
-        boxShadow: rem.isCompleted
-            ? null
-            : [
-                BoxShadow(
-                  color: const Color(0xFF3B82F6).withOpacity(0.12),
-                  blurRadius: 10,
-                  offset: const Offset(0, 4),
-                ),
-              ],
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -391,11 +490,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                     const SizedBox(width: 4),
                     Text(
                       rem.time,
-                      style: const TextStyle(
-                        fontSize: 12,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF0F172A),
-                      ),
+                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                     ),
                   ],
                 ),
@@ -403,7 +498,6 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
             ],
           ),
           const SizedBox(height: 10),
-
           Text(
             rem.title,
             style: TextStyle(
@@ -413,53 +507,12 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
               decoration: rem.isCompleted ? TextDecoration.lineThrough : null,
             ),
           ),
-
-          if (rem.dosageOrLocation != null) ...[
-            const SizedBox(height: 8),
-            Container(
-              padding: const EdgeInsets.all(10),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF8FAFC),
-                borderRadius: BorderRadius.circular(16),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
-              ),
-              child: Row(
-                children: [
-                  Icon(
-                    rem.category == ReminderCategory.appointment ? Icons.location_on : Icons.medication,
-                    size: 16,
-                    color: rem.category == ReminderCategory.appointment ? Colors.blue : Colors.red,
-                  ),
-                  const SizedBox(width: 8),
-                  Expanded(
-                    child: Text(
-                      rem.dosageOrLocation!,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w700, color: Color(0xFF334155)),
-                    ),
-                  ),
-                ],
-              ),
-            ),
-          ],
-
-          if (rem.notes != null) ...[
-            const SizedBox(height: 6),
-            Text(
-              '💡 ${rem.notes}',
-              style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w600, color: Color(0xFF64748B)),
-            ),
-          ],
-
           const SizedBox(height: 14),
-
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(
               onPressed: () => notifier.confirmMedication(rem.id),
-              icon: Icon(
-                rem.isCompleted ? Icons.check_circle : Icons.check,
-                size: 24,
-              ),
+              icon: Icon(rem.isCompleted ? Icons.check_circle : Icons.check, size: 24),
               label: Text(
                 rem.isCompleted ? 'DONE AT ${rem.completedAt ?? "TODAY"}' : 'MARK COMPLETED NOW',
                 style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
@@ -488,7 +541,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
     }
   }
 
-    Widget _buildFeelingButton({
+  Widget _buildFeelingButton({
     required String emoji,
     required String label,
     required String moodValue,

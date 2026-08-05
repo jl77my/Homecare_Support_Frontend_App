@@ -1,9 +1,11 @@
+// lib/features/family/views/family_dashboard_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../providers/family_provider.dart';
+import 'family_pairing_view.dart';
 
-class FamilyDashboardView extends ConsumerWidget {
+class FamilyDashboardView extends ConsumerStatefulWidget {
   final VoidCallback onNavigateToReports;
 
   const FamilyDashboardView({
@@ -12,32 +14,155 @@ class FamilyDashboardView extends ConsumerWidget {
   });
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<FamilyDashboardView> createState() => _FamilyDashboardViewState();
+}
+
+class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
+  @override
+  void initState() {
+    super.initState();
+    Future.microtask(() => ref.read(familyDashboardProvider.notifier).fetchLinkedSeniors());
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final familyState = ref.watch(familyDashboardProvider);
 
     final latestVital = familyState.latestVital;
     final latestMsg = familyState.latestMessage;
     final latestReport = familyState.latestReport;
+    final linkedSeniors = familyState.linkedSeniors;
+    final selectedElderlyId = familyState.selectedElderlyId;
 
     if (familyState.isLoading) {
       return const Center(child: CircularProgressIndicator());
     }
 
+    // 1. First-Time / Unlinked Login Experience (Shows ONLY Onboarding Card)
+    if (linkedSeniors.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(36),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFBFDBFE), width: 2),
+                  ),
+                  child: const Icon(Icons.family_restroom, size: 56, color: Color(0xFF2563EB)),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'Welcome to HomeCare',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Link your senior family member using their 6-character invitation code to view live vitals, daily care reports, and caregiver updates.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const FamilyPairingView()),
+                      );
+                    },
+                    icon: const Icon(Icons.qr_code_scanner, size: 20),
+                    label: const Text('ENTER PAIRING CODE NOW', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 2. Linked State Experience (Activated Full Dashboard)
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
-        // Live Health Report Banner Container
+        // Active Senior Selector Header Bar
+        Container(
+          margin: const EdgeInsets.only(bottom: 16),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+          decoration: BoxDecoration(
+            color: const Color(0xFF0F172A),
+            borderRadius: BorderRadius.circular(20),
+          ),
+          child: Row(
+            children: [
+              const Icon(Icons.person_search_outlined, color: Color(0xFF60A5FA), size: 20),
+              const SizedBox(width: 8),
+              const Text(
+                'MONITORING:',
+                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+              ),
+              const SizedBox(width: 8),
+              Expanded(
+                child: DropdownButtonHideUnderline(
+                  child: DropdownButton<String>(
+                    value: linkedSeniors.any((s) => s['elderlyId'] == selectedElderlyId)
+                        ? selectedElderlyId
+                        : linkedSeniors.first['elderlyId'],
+                    dropdownColor: const Color(0xFF1E293B),
+                    isExpanded: true,
+                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    items: linkedSeniors.map((senior) {
+                      return DropdownMenuItem<String>(
+                        value: senior['elderlyId'],
+                        child: Text(senior['name'] ?? 'Senior User', overflow: TextOverflow.ellipsis),
+                      );
+                    }).toList(),
+                    onChanged: (newElderlyId) {
+                      if (newElderlyId != null) {
+                        ref.read(familyDashboardProvider.notifier).switchElderlyContext(newElderlyId);
+                      }
+                    },
+                  ),
+                ),
+              ),
+            ],
+          ),
+        ),
+
+        // Live Health Report Container
         Container(
           decoration: BoxDecoration(
             color: Colors.white,
             borderRadius: BorderRadius.circular(36),
             border: Border.all(color: const Color(0xFFF1F5F9)),
             boxShadow: const [
-              BoxShadow(
-                color: Color(0x0A000000),
-                blurRadius: 16,
-                offset: Offset(0, 4),
-              ),
+              BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 4)),
             ],
           ),
           child: Column(
@@ -53,12 +178,7 @@ class FamilyDashboardView extends ConsumerWidget {
                   children: [
                     const Text(
                       'LIVE HEALTH REPORT',
-                      style: TextStyle(
-                        fontSize: 10,
-                        fontWeight: FontWeight.w900,
-                        color: Color(0xFF94A3B8),
-                        letterSpacing: 1.2,
-                      ),
+                      style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 1.2),
                     ),
                     Container(
                       padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
@@ -111,7 +231,7 @@ class FamilyDashboardView extends ConsumerWidget {
                                 Container(
                                   padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
                                   decoration: BoxDecoration(
-                                    color: Color(0xFF22C55E).withOpacity(0.15),
+                                    color: const Color(0xFF22C55E).withOpacity(0.15),
                                     borderRadius: BorderRadius.circular(10),
                                   ),
                                   child: const Text(
@@ -174,7 +294,7 @@ class FamilyDashboardView extends ConsumerWidget {
                     ),
                     const SizedBox(height: 12),
 
-                    // Heart Rate & Stability Banner
+                    // Heart Rate Banner
                     Container(
                       padding: const EdgeInsets.all(16),
                       decoration: BoxDecoration(
@@ -231,7 +351,7 @@ class FamilyDashboardView extends ConsumerWidget {
         ),
         const SizedBox(height: 20),
 
-        // Recent Care Reports Teaser Card
+        // Recent Care Reports Teaser
         if (latestReport != null)
           Container(
             padding: const EdgeInsets.all(20),
@@ -264,13 +384,12 @@ class FamilyDashboardView extends ConsumerWidget {
                       ],
                     ),
                     TextButton(
-                      onPressed: onNavigateToReports,
+                      onPressed: widget.onNavigateToReports,
                       child: const Text('View All', style: TextStyle(fontWeight: FontWeight.bold, fontSize: 12)),
                     ),
                   ],
                 ),
                 const SizedBox(height: 10),
-
                 Container(
                   padding: const EdgeInsets.all(14),
                   decoration: BoxDecoration(
@@ -313,23 +432,6 @@ class FamilyDashboardView extends ConsumerWidget {
                         overflow: TextOverflow.ellipsis,
                         style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), height: 1.4),
                       ),
-                      if (latestReport.photoUrls.isNotEmpty) ...[
-                        const SizedBox(height: 10),
-                        ClipRRect(
-                          borderRadius: BorderRadius.circular(14),
-                          child: Image.network(
-                            latestReport.photoUrls.first,
-                            height: 120,
-                            width: double.infinity,
-                            fit: BoxFit.cover,
-                            errorBuilder: (_, __, ___) => Container(
-                              height: 60,
-                              color: const Color(0xFFE2E8F0),
-                              child: const Icon(Icons.image_not_supported, color: Color(0xFF94A3B8)),
-                            ),
-                          ),
-                        ),
-                      ],
                     ],
                   ),
                 ),
@@ -338,7 +440,7 @@ class FamilyDashboardView extends ConsumerWidget {
           ),
         const SizedBox(height: 20),
 
-        // Latest Caregiver Message Update Card
+        // Caregiver Message Update Card
         if (latestMsg != null)
           Container(
             padding: const EdgeInsets.all(20),

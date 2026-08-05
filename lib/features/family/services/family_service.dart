@@ -18,7 +18,41 @@ class FamilyService {
         'Authorization': 'Bearer $token',
       };
 
-  // 1. Monitor Care Tasks
+  // 1. Consume Family Pairing Code (family_pairing_view.dart)
+  Future<Map<String, dynamic>> linkFamilyByCode({
+    required String token,
+    required String code,
+    required String relationship,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/family/consume-code'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'code': code,
+        'relationship': relationship,
+      }),
+    );
+    return _parseResponse(response);
+  }
+
+  // 2. Fetch Linked Elderly List for Family Member
+  Future<List<Map<String, String>>> getLinkedSeniors(String token) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/family/linked-elderly'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    final rawList = data['seniors'] as List<dynamic>? ?? [];
+    return rawList.map((item) {
+      final map = item as Map<String, dynamic>;
+      return {
+        'elderlyId': (map['elderlyId'] ?? map['id'] ?? map['Id'] ?? '').toString(),
+        'name': (map['name'] ?? map['Name'] ?? 'Senior User').toString(),
+      };
+    }).toList();
+  }
+
+  // 3. Monitor Care Tasks
   Future<List<dynamic>> getCareTasks(String token, String patientId) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/family/tasks/$patientId'),
@@ -28,7 +62,7 @@ class FamilyService {
     return data['tasks'] as List<dynamic>? ?? [];
   }
 
-  // 2. View Health Vitals and Rule-Based Alerts
+  // 4. View Health Vitals and Rule-Based Alerts
   Future<List<dynamic>> getHealthRecords(String token, String patientId) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/family/health/$patientId'),
@@ -38,7 +72,7 @@ class FamilyService {
     return data['records'] as List<dynamic>? ?? [];
   }
 
-  // 3. View Daily Care Reports
+  // 5. View Daily Care Reports
   Future<List<dynamic>> getCareReports(String token, String patientId) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/family/reports/$patientId'),
@@ -48,7 +82,7 @@ class FamilyService {
     return data['reports'] as List<dynamic>? ?? [];
   }
 
-  // 4. View Elderly Mood Log
+  // 6. View Elderly Mood Log
   Future<List<dynamic>> getElderlyMoods(String token, String patientId) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/family/moods/$patientId'),
@@ -58,7 +92,7 @@ class FamilyService {
     return data['moods'] as List<dynamic>? ?? [];
   }
 
-  // 5. Send Message to Caregiver
+  // 7. Send Message to Caregiver
   Future<Map<String, dynamic>> sendMessage({
     required String token,
     required String receiverId,
@@ -80,6 +114,7 @@ class FamilyService {
     if (response.statusCode >= 200 && response.statusCode < 300) {
       return decoded is Map<String, dynamic> ? decoded : {'data': decoded};
     }
-    throw Exception(decoded['message'] ?? decoded['error'] ?? 'Request failed');
+    final message = decoded['message'] ?? decoded['error'] ?? 'Request failed';
+    throw Exception(message);
   }
 }

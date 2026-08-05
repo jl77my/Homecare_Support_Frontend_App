@@ -7,7 +7,7 @@ class ElderlyService {
         _baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE_URL',
-              defaultValue: 'http://localhost:3000/api', // 10.0.2.2 for Android Emulator
+              defaultValue: 'http://localhost:3000/api',
             );
 
   final http.Client _client;
@@ -18,7 +18,21 @@ class ElderlyService {
         'Authorization': 'Bearer $token',
       };
 
-  // 1. Fetch Scheduled Medications for Today
+  // Check if Elderly User has active Caregiver or Family links
+  Future<bool> checkPairingStatus(String token) async {
+    try {
+      final response = await _client.get(
+        Uri.parse('$_baseUrl/pairing/status'),
+        headers: _headers(token),
+      );
+      final data = _parseResponse(response);
+      return (data['isLinked'] as bool?) ?? false;
+    } catch (_) {
+      return false;
+    }
+  }
+
+  // Fetch Scheduled Medications
   Future<List<dynamic>> getMedications(String token) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/elderly/medications'),
@@ -28,7 +42,7 @@ class ElderlyService {
     return data['medications'] as List<dynamic>? ?? [];
   }
 
-  // 2. Confirm Medication Intake
+  // Confirm Medication Intake
   Future<Map<String, dynamic>> confirmMedication({
     required String token,
     required String medicationId,
@@ -45,7 +59,7 @@ class ElderlyService {
     return _parseResponse(response);
   }
 
-  // 3. Log Daily Mood ('Happy', 'Neutral', 'Sad')
+  // Log Mood
   Future<Map<String, dynamic>> logMood({
     required String token,
     required String mood,
@@ -53,21 +67,30 @@ class ElderlyService {
     final response = await _client.post(
       Uri.parse('$_baseUrl/elderly/mood'),
       headers: _headers(token),
-      body: jsonEncode({
-        'mood': mood,
-      }),
+      body: jsonEncode({'mood': mood}),
     );
     return _parseResponse(response);
   }
 
-  // 4. Trigger SOS Emergency Alert
-  Future<Map<String, dynamic>> triggerSos({
-    required String token,
-  }) async {
+  // Trigger SOS Alert
+  Future<Map<String, dynamic>> triggerSos({required String token}) async {
     final response = await _client.post(
       Uri.parse('$_baseUrl/elderly/sos'),
       headers: _headers(token),
       body: jsonEncode({}),
+    );
+    return _parseResponse(response);
+  }
+
+  // Generate Temporary Pairing Code
+  Future<Map<String, dynamic>> generatePairingCode({
+    required String token,
+    required String roleTarget,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/pairing/generate'),
+      headers: _headers(token),
+      body: jsonEncode({'roleTarget': roleTarget}),
     );
     return _parseResponse(response);
   }

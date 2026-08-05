@@ -18,7 +18,37 @@ class CaregiverService {
         'Authorization': 'Bearer $token',
       };
 
-  // 1. Assign Care Task
+  // 1. Redeem Senior Pairing Code (PairingView)
+  Future<Map<String, dynamic>> pairWithElderly({
+    required String token,
+    required String code,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/pairing/consume'),
+      headers: _headers(token),
+      body: jsonEncode({'code': code}),
+    );
+    return _parseResponse(response);
+  }
+
+  // 2. Fetch Assigned Seniors for PatientSelectorBar
+  Future<List<Map<String, String>>> getAssignedSeniors(String token) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/caregiver/assigned-patients'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    final rawList = data['patients'] as List<dynamic>? ?? [];
+    return rawList.map((item) {
+      final map = item as Map<String, dynamic>;
+      return {
+        'elderlyId': (map['elderlyId'] ?? map['id'] ?? map['Id'] ?? '').toString(),
+        'name': (map['name'] ?? map['Name'] ?? 'Senior User').toString(),
+      };
+    }).toList();
+  }
+
+  // 3. Assign Care Task
   Future<Map<String, dynamic>> createTask({
     required String token,
     required String title,
@@ -39,7 +69,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 2. Schedule Medication
+  // 4. Schedule Medication
   Future<Map<String, dynamic>> scheduleMedication({
     required String token,
     required String patientId,
@@ -60,7 +90,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 3. Record Health Data & Receive Rule Alerts
+  // 5. Record Health Data
   Future<Map<String, dynamic>> recordHealth({
     required String token,
     required String patientId,
@@ -83,7 +113,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 4. Submit Care Report with Optional Photo Attachment
+  // 6. Submit Care Report
   Future<Map<String, dynamic>> submitCareReport({
     required String token,
     required String patientId,
@@ -106,7 +136,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 5. Send In-App Message
+  // 7. Send In-App Message
   Future<Map<String, dynamic>> sendMessage({
     required String token,
     required String receiverId,

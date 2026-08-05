@@ -1,17 +1,20 @@
+// lib/features/caregiver/views/caregiver_status_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
 import '../../../core/models/models.dart';
 import '../providers/caregiver_provider.dart';
+import '../widgets/patient_selector_bar.dart';
+import 'pairing_view.dart';
 
 class CaregiverStatusView extends ConsumerStatefulWidget {
   final VoidCallback onNavigateToReports;
-  final String patientId;
+  final String elderlyId;
 
   const CaregiverStatusView({
     super.key,
     required this.onNavigateToReports,
-    this.patientId = "00000000-0000-0000-0000-000000000000",
+    this.elderlyId = "00000000-0000-0000-0000-000000000000",
   });
 
   @override
@@ -22,6 +25,13 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
   final _heartRateController = TextEditingController();
   final _bpController = TextEditingController();
   final _glucoseController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    // Fetch assigned seniors list on view initialization
+    Future.microtask(() => ref.read(caregiverProvider.notifier).fetchAssignedSeniors());
+  }
 
   @override
   void dispose() {
@@ -44,7 +54,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
     }
 
     final success = await ref.read(caregiverProvider.notifier).recordHealth(
-          patientId: widget.patientId,
+          patientId: widget.elderlyId, // Refers to selected active senior
           heartRate: hrStr,
           bloodPressure: bp,
           bloodSugar: glucoseStr.isEmpty ? '120' : glucoseStr,
@@ -73,6 +83,8 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
   @override
   Widget build(BuildContext context) {
     final caregiverState = ref.watch(caregiverProvider);
+    final assignedSeniors = caregiverState.assignedSeniors;
+
     final latest = caregiverState.vitals.isNotEmpty
         ? caregiverState.vitals.first
         : HealthVitals(
@@ -84,9 +96,97 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
             recordedBy: 'Caregiver',
           );
 
+    if (caregiverState.isLoading) {
+      return const Center(child: CircularProgressIndicator());
+    }
+
+    // 1. Unlinked State: Shows ONLY Onboarding Linking Card for new caregivers
+    if (assignedSeniors.isEmpty) {
+      return ListView(
+        padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
+        children: [
+          Container(
+            padding: const EdgeInsets.all(28),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(36),
+              border: Border.all(color: const Color(0xFFE2E8F0), width: 2),
+              boxShadow: const [
+                BoxShadow(
+                  color: Color(0x0F000000),
+                  blurRadius: 16,
+                  offset: Offset(0, 4),
+                ),
+              ],
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(20),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFFEFF6FF),
+                    shape: BoxShape.circle,
+                    border: Border.all(color: const Color(0xFFBFDBFE), width: 2),
+                  ),
+                  child: const Icon(Icons.qr_code_scanner, size: 56, color: Color(0xFF2563EB)),
+                ),
+                const SizedBox(height: 20),
+                const Text(
+                  'No Senior Patient Assigned',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                ),
+                const SizedBox(height: 8),
+                const Text(
+                  'Enter the 6-character caregiver invitation code (HC-XXXX) provided by the senior or family member to start monitoring and logging vitals.',
+                  textAlign: TextAlign.center,
+                  style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.5),
+                ),
+                const SizedBox(height: 28),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const PairingView()),
+                      );
+                    },
+                    icon: const Icon(Icons.link, size: 20),
+                    label: const Text('PAIR SENIOR PATIENT NOW', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ],
+      );
+    }
+
+    // 2. Linked State: Full Active Dashboard
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
+        // Patient Selector Bar Header Component
+        PatientSelectorBar(
+          assignedSeniors: assignedSeniors, // List<Map<String, String>>
+          selectedElderlyId: widget.elderlyId,
+          onElderlySelected: (newElderlyId) {
+            ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
+          },
+          onPairNewElderly: () {
+            Navigator.of(context).push(
+              MaterialPageRoute(builder: (context) => const PairingView()),
+            );
+          },
+        ),
+
         // Active Monitoring Card
         Container(
           padding: const EdgeInsets.all(20),
@@ -271,7 +371,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
                       ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
                       : const Icon(Icons.check, size: 20),
                   label: const Text('SUBMIT RECORDS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    style: ElevatedButton.styleFrom(
+                  style: ElevatedButton.styleFrom(
                     backgroundColor: const Color(0xFF2563EB),
                     foregroundColor: Colors.white,
                     padding: const EdgeInsets.symmetric(vertical: 16),
@@ -354,7 +454,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
             filled: true,
             fillColor: Colors.white.withOpacity(0.1),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-              enabledBorder: OutlineInputBorder(
+            enabledBorder: OutlineInputBorder(
               borderRadius: BorderRadius.circular(16),
               borderSide: BorderSide(color: Colors.white.withOpacity(0.1)),
             ),

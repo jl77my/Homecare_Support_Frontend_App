@@ -8,6 +8,8 @@ class CaregiverState {
   final List<CareTask> tasks;
   final List<HealthVitals> vitals;
   final List<CareReport> reports;
+  final List<Map<String, String>> assignedSeniors; // Added for PatientSelectorBar
+  final String activeElderlyId;
   final bool isLoading;
   final String? errorMessage;
 
@@ -15,6 +17,8 @@ class CaregiverState {
     this.tasks = const [],
     this.vitals = const [],
     this.reports = const [],
+    this.assignedSeniors = const [],
+    this.activeElderlyId = '',
     this.isLoading = false,
     this.errorMessage,
   });
@@ -23,6 +27,8 @@ class CaregiverState {
     List<CareTask>? tasks,
     List<HealthVitals>? vitals,
     List<CareReport>? reports,
+    List<Map<String, String>>? assignedSeniors,
+    String? activeElderlyId,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
@@ -31,6 +37,8 @@ class CaregiverState {
       tasks: tasks ?? this.tasks,
       vitals: vitals ?? this.vitals,
       reports: reports ?? this.reports,
+      assignedSeniors: assignedSeniors ?? this.assignedSeniors,
+      activeElderlyId: activeElderlyId ?? this.activeElderlyId,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
@@ -47,8 +55,48 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   final CaregiverService _service;
   final Ref _ref;
 
-  // Helper method to retrieve the JWT token safely
   String? get _token => _ref.read(authProvider).token;
+
+  // Redeem Pairing Code (PairingView)
+  Future<bool> pairWithElderly(String code) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.pairWithElderly(token: token, code: code);
+      await fetchAssignedSeniors(); // Refresh senior list after pairing
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
+  // Fetch List of Assigned Seniors for PatientSelectorBar
+  Future<void> fetchAssignedSeniors() async {
+    final token = _token;
+    if (token == null) return;
+
+    try {
+      final seniors = await _service.getAssignedSeniors(token);
+      String currentActive = state.activeElderlyId;
+      if (currentActive.isEmpty && seniors.isNotEmpty) {
+        currentActive = seniors.first['elderlyId'] ?? '';
+      }
+      state = state.copyWith(
+        assignedSeniors: seniors,
+        activeElderlyId: currentActive,
+      );
+    } catch (e) {
+      _handleException(e);
+    }
+  }
+
+  // Switch Active Senior Context in PatientSelectorBar
+  void switchElderlyContext(String elderlyId) {
+    state = state.copyWith(activeElderlyId: elderlyId);
+  }
 
   // Function 1: Assign Care Task
   Future<bool> createTask({

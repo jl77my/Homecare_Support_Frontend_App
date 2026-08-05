@@ -3,10 +3,12 @@ import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/elderly_service.dart';
 
+// 1. Immutable Elderly State
 class ElderlyState {
   final List<Reminder> reminders;
   final bool isSosActive;
   final bool isAudioEnabled;
+  final bool isLinked; // Added isLinked field
   final bool isLoading;
   final String? errorMessage;
 
@@ -14,6 +16,7 @@ class ElderlyState {
     this.reminders = const [],
     this.isSosActive = false,
     this.isAudioEnabled = true,
+    this.isLinked = false, // Default unlinked for new elderly users
     this.isLoading = false,
     this.errorMessage,
   });
@@ -22,6 +25,7 @@ class ElderlyState {
     List<Reminder>? reminders,
     bool? isSosActive,
     bool? isAudioEnabled,
+    bool? isLinked,
     bool? isLoading,
     String? errorMessage,
     bool clearError = false,
@@ -30,14 +34,17 @@ class ElderlyState {
       reminders: reminders ?? this.reminders,
       isSosActive: isSosActive ?? this.isSosActive,
       isAudioEnabled: isAudioEnabled ?? this.isAudioEnabled,
+      isLinked: isLinked ?? this.isLinked,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
   }
 }
 
+// 2. Global Elderly Service Provider
 final elderlyServiceProvider = Provider<ElderlyService>((ref) => ElderlyService());
 
+// 3. StateNotifier Logic Class
 class ElderlyNotifier extends StateNotifier<ElderlyState> {
   ElderlyNotifier(this._service, this._ref) : super(const ElderlyState());
 
@@ -48,6 +55,7 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     state = state.copyWith(isAudioEnabled: !state.isAudioEnabled);
   }
 
+  // Fetch reminders and check active pairing status
   Future<void> fetchReminders() async {
     final token = _ref.read(authProvider).token;
     if (token == null) return;
@@ -56,7 +64,15 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     try {
       final rawList = await _service.getMedications(token);
       final reminders = rawList.map((json) => Reminder.fromJson(json)).toList();
-      state = state.copyWith(reminders: reminders, isLoading: false);
+      
+      // Check if senior is paired with caregiver or family
+      final isLinked = await _service.checkPairingStatus(token);
+
+      state = state.copyWith(
+        reminders: reminders,
+        isLinked: isLinked,
+        isLoading: false,
+      );
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
@@ -117,6 +133,25 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
 
   void resolveSOS() {
     state = state.copyWith(isSosActive: false);
+  }
+
+  // Generate Invitation Code for Caregivers or Family
+  Future<String?> generatePairingCode(String roleTarget) async {
+    final token = _ref.read(authProvider).token;
+    if (token == null) return null;
+
+    try {
+      final res = await _service.generatePairingCode(
+        token: token,
+        roleTarget: roleTarget,
+      );
+      return res['code']?.toString();
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: e.toString().replaceFirst('Exception: ', ''),
+      );
+      return null;
+    }
   }
 }
 
