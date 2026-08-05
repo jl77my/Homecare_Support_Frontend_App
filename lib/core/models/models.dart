@@ -229,23 +229,34 @@ class CareReport {
 // 6. Chat Message Model (cite: 1)
 class ChatMessage {
   final String id;
+  final String elderlyId;
   final String senderId;
+  final String senderName;
+  final String senderRole;
   final String text;
   final DateTime timestamp;
 
-  const ChatMessage({
+  ChatMessage({
     required this.id,
+    required this.elderlyId,
     required this.senderId,
+    required this.senderName,
+    required this.senderRole,
     required this.text,
     required this.timestamp,
   });
 
   factory ChatMessage.fromJson(Map<String, dynamic> json) {
     return ChatMessage(
-      id: json['Id'] ?? json['id'] ?? '',
-      senderId: json['SenderId'] ?? json['senderId'] ?? '',
-      text: json['MessageText'] ?? json['text'] ?? '',
-      timestamp: DateTime.tryParse(json['DatetimeCreated'] ?? '') ?? DateTime.now(),
+      id: (json['id'] ?? json['Id'] ?? '').toString(),
+      elderlyId: (json['elderlyId'] ?? json['ElderlyId'] ?? '').toString(),
+      senderId: (json['senderId'] ?? json['SenderId'] ?? '').toString(),
+      senderName: (json['senderName'] ?? json['SenderName'] ?? 'Care Team').toString(),
+      senderRole: (json['senderRole'] ?? json['SenderRole'] ?? 'User').toString(),
+      text: (json['text'] ?? json['MessageText'] ?? '').toString(),
+      timestamp: json['timestamp'] != null
+          ? DateTime.parse(json['timestamp'].toString())
+          : DateTime.now(),
     );
   }
 }

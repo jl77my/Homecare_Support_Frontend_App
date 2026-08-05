@@ -1,5 +1,6 @@
 import 'dart:convert';
 import 'package:http/http.dart' as http;
+import '../../../core/models/models.dart';
 
 class CaregiverService {
   CaregiverService({http.Client? client, String? baseUrl})
@@ -136,21 +137,55 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 7. Send In-App Message
+  // 7. Fetch Isolated Chat Messages for Elderly Channel
+  Future<List<ChatMessage>> getChatMessages({
+    required String token,
+    required String elderlyId,
+  }) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/chat/messages/$elderlyId'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    final rawList = data['messages'] as List<dynamic>? ?? [];
+    return rawList.map((json) => ChatMessage.fromJson(json)).toList();
+  }
+
+  // 8. Send In-App Message to Channel
   Future<Map<String, dynamic>> sendMessage({
     required String token,
-    required String receiverId,
+    required String elderlyId,
     required String messageText,
+    String? receiverId,
   }) async {
     final response = await _client.post(
-      Uri.parse('$_baseUrl/caregiver/chat'),
+      Uri.parse('$_baseUrl/chat/send'),
       headers: _headers(token),
       body: jsonEncode({
-        'receiverId': receiverId,
+        'elderlyId': elderlyId,
         'messageText': messageText,
+        if (receiverId != null) 'receiverId': receiverId,
       }),
     );
     return _parseResponse(response);
+  }
+
+// 9. Fetch Care Connections for Active Elderly Context
+  Future<Map<String, dynamic>> getCareConnections(String token, String elderlyId) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/user/care-connections?elderlyId=$elderlyId'),
+      headers: _headers(token),
+    );
+    return _parseResponse(response);
+  }
+
+  // 10. Delete / Unlink Care Connection
+  Future<void> deleteCareConnection(String token, String connectionId) async {
+    final response = await _client.delete(
+      Uri.parse('$_baseUrl/user/care-connections/$connectionId'),
+      headers: _headers(token),
+    );
+    _parseResponse(response);
   }
 
   Map<String, dynamic> _parseResponse(http.Response response) {

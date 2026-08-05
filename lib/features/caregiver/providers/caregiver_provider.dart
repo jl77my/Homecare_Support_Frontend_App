@@ -9,6 +9,9 @@ class CaregiverState {
   final List<HealthVitals> vitals;
   final List<CareReport> reports;
   final List<Map<String, String>> assignedSeniors; // Added for PatientSelectorBar
+  final List<ChatMessage> currentChatMessages;   // Isolated channel thread messages
+  final List<dynamic> activeCaregivers;           // Care connections list
+  final List<dynamic> activeFamilyMembers;        // Care connections list
   final String activeElderlyId;
   final bool isLoading;
   final String? errorMessage;
@@ -18,6 +21,9 @@ class CaregiverState {
     this.vitals = const [],
     this.reports = const [],
     this.assignedSeniors = const [],
+    this.currentChatMessages = const [],
+    this.activeCaregivers = const [],
+    this.activeFamilyMembers = const [],
     this.activeElderlyId = '',
     this.isLoading = false,
     this.errorMessage,
@@ -28,6 +34,9 @@ class CaregiverState {
     List<HealthVitals>? vitals,
     List<CareReport>? reports,
     List<Map<String, String>>? assignedSeniors,
+    List<ChatMessage>? currentChatMessages,
+    List<dynamic>? activeCaregivers,
+    List<dynamic>? activeFamilyMembers,
     String? activeElderlyId,
     bool? isLoading,
     String? errorMessage,
@@ -38,6 +47,9 @@ class CaregiverState {
       vitals: vitals ?? this.vitals,
       reports: reports ?? this.reports,
       assignedSeniors: assignedSeniors ?? this.assignedSeniors,
+      currentChatMessages: currentChatMessages ?? this.currentChatMessages,
+      activeCaregivers: activeCaregivers ?? this.activeCaregivers,
+      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,
       activeElderlyId: activeElderlyId ?? this.activeElderlyId,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
@@ -88,6 +100,9 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         assignedSeniors: seniors,
         activeElderlyId: currentActive,
       );
+      if (currentActive.isNotEmpty) {
+        await fetchCareConnections(currentActive);
+      }
     } catch (e) {
       _handleException(e);
     }
@@ -96,9 +111,88 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   // Switch Active Senior Context in PatientSelectorBar
   void switchElderlyContext(String elderlyId) {
     state = state.copyWith(activeElderlyId: elderlyId);
+    fetchCareConnections(elderlyId);
   }
 
-  // Function 1: Assign Care Task
+  // Fetch Care Connections for Selected Senior
+  Future<void> fetchCareConnections(String elderlyId) async {
+    final token = _token;
+    if (token == null) return;
+
+    try {
+      final data = await _service.getCareConnections(token, elderlyId);
+      state = state.copyWith(
+        activeCaregivers: data['caregivers'] as List<dynamic>? ?? [],
+        activeFamilyMembers: data['familyMembers'] as List<dynamic>? ?? [],
+      );
+    } catch (e) {
+      _handleException(e);
+    }
+  }
+
+  // Delete / Remove Care Connection (Enforcing Role Privilege Matrix)
+  Future<bool> deleteCareConnection(String connectionId) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.deleteCareConnection(token, connectionId);
+      if (state.activeElderlyId.isNotEmpty) {
+        await fetchCareConnections(state.activeElderlyId);
+      }
+      await fetchAssignedSeniors();
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
+  // Fetch isolated chat messages for selected elderly channel
+  Future<void> fetchChatMessages(String elderlyId) async {
+    final token = _token;
+    if (token == null) return;
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final messages = await _service.getChatMessages(
+        token: token,
+        elderlyId: elderlyId,
+      );
+      state = state.copyWith(
+        currentChatMessages: messages,
+        isLoading: false,
+      );
+    } catch (e) {
+      _handleException(e);
+    }
+  }
+
+  // Send message to isolated channel
+  Future<bool> sendChatMessage({
+    required String elderlyId,
+    required String messageText,
+    String? receiverId,
+  }) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
+
+    try {
+      await _service.sendMessage(
+        token: token,
+        elderlyId: elderlyId,
+        messageText: messageText,
+        receiverId: receiverId,
+      );
+      await fetchChatMessages(elderlyId); // Refresh messages thread
+      return true;
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
+  // Assign Care Task
   Future<bool> createTask({
     required String title,
     required String description,
@@ -124,7 +218,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     }
   }
 
-  // Function 2: Schedule Medication
+  // Schedule Medication
   Future<bool> scheduleMedication({
     required String patientId,
     required String medicationName,
@@ -150,7 +244,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     }
   }
 
-  // Function 3: Record Health Data & Receive Rule Alerts
+  // Record Health Data & Receive Rule Alerts
   Future<bool> recordHealth({
     required String patientId,
     required String heartRate,
@@ -178,7 +272,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     }
   }
 
-  // Function 4: Submit Care Report
+  // Submit Care Report
   Future<bool> submitCareReport({
     required String patientId,
     required String healthStatusNotes,
@@ -198,28 +292,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         dailyActivities: dailyActivities,
         observations: observations,
         photoUrl: photoUrl,
-      );
-      state = state.copyWith(isLoading: false);
-      return true;
-    } catch (e) {
-      return _handleException(e);
-    }
-  }
-
-  // Function 5: Send In-App Message
-  Future<bool> sendMessage({
-    required String receiverId,
-    required String messageText,
-  }) async {
-    final token = _token;
-    if (token == null) return _handleAuthError();
-
-    state = state.copyWith(isLoading: true, clearError: true);
-    try {
-      await _service.sendMessage(
-        token: token,
-        receiverId: receiverId,
-        messageText: messageText,
       );
       state = state.copyWith(isLoading: false);
       return true;

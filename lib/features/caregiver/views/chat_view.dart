@@ -1,181 +1,226 @@
+// lib/features/caregiver/views/chat_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 
+import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
-import '../../caregiver/providers/caregiver_provider.dart';
+import '../../family/providers/family_provider.dart';
+import '../providers/caregiver_provider.dart';
 
 class ChatView extends ConsumerStatefulWidget {
-  final String receiverId;
-
-  const ChatView({
-    super.key,
-    this.receiverId = "00000000-0000-0000-0000-000000000000",
-  });
+  const ChatView({super.key});
 
   @override
   ConsumerState<ChatView> createState() => _ChatViewState();
 }
 
 class _ChatViewState extends ConsumerState<ChatView> {
-  final _msgController = TextEditingController();
-  final _scrollController = ScrollController();
+  Map<String, String>? _activeChannel; // Selected senior channel
+  final _textController = TextEditingController();
 
   @override
   void dispose() {
-    _msgController.dispose();
-    _scrollController.dispose();
+    _textController.dispose();
     super.dispose();
-  }
-
-  Future<void> _send() async {
-    final text = _msgController.text.trim();
-    if (text.isEmpty) return;
-
-    final success = await ref.read(caregiverProvider.notifier).sendMessage(
-          receiverId: widget.receiverId,
-          messageText: text,
-        );
-
-    if (success && mounted) {
-      _msgController.clear();
-      Future.delayed(const Duration(milliseconds: 100), () {
-        if (_scrollController.hasClients) {
-          _scrollController.animateTo(
-            _scrollController.position.maxScrollExtent,
-            duration: const Duration(milliseconds: 300),
-            curve: Curves.easeOut,
-          );
-        }
-      });
-    } else if (mounted) {
-      final error = ref.read(caregiverProvider).errorMessage;
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(content: Text(error ?? 'Failed to send message.')),
-      );
-    }
   }
 
   @override
   Widget build(BuildContext context) {
-    final authUser = ref.watch(authProvider).user;
+    final familyState = ref.watch(familyDashboardProvider);
+    final linkedSeniors = familyState.linkedSeniors; // List<Map<String, String>>
     final caregiverState = ref.watch(caregiverProvider);
-    final currentUid = authUser?.id ?? 'current_user';
+    final messages = caregiverState.currentChatMessages; // Strongly typed ChatMessage list
+    final authState = ref.watch(authProvider);
+    final currentUser = authState.user;
+
+    // Level 1: Channel List View if no channel selected
+    if (_activeChannel == null) {
+      return Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          const Padding(
+            padding: EdgeInsets.symmetric(vertical: 16),
+            child: Text(
+              'Care Communication Channels',
+              style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+            ),
+          ),
+          if (linkedSeniors.isEmpty)
+            Expanded(
+              child: Center(
+                child: Container(
+                  padding: const EdgeInsets.all(24),
+                  decoration: BoxDecoration(
+                    color: Colors.white,
+                    borderRadius: BorderRadius.circular(28),
+                    border: Border.all(color: const Color(0xFFE2E8F0)),
+                  ),
+                  child: const Text(
+                    'No linked senior channels available.\nPlease link a senior patient first.',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600),
+                  ),
+                ),
+              ),
+            )
+          else
+            Expanded(
+              child: ListView.separated(
+                itemCount: linkedSeniors.length,
+                separatorBuilder: (_, __) => const SizedBox(height: 12),
+                itemBuilder: (context, index) {
+                  final senior = linkedSeniors[index];
+                  return Card(
+                    elevation: 0,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(24),
+                      side: const BorderSide(color: Color(0xFFF1F5F9)),
+                    ),
+                    child: ListTile(
+                      contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                      leading: CircleAvatar(
+                        radius: 24,
+                        backgroundColor: const Color(0xFFEFF6FF),
+                        child: Text(
+                          (senior['name'] ?? 'S').substring(0, 1).toUpperCase(),
+                          style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 18),
+                        ),
+                      ),
+                      title: Text(
+                        'Senior Channel: ${senior['name'] ?? "Senior Patient"}',
+                        style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15),
+                      ),
+                      subtitle: const Text('Tap to enter private care team chat', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                      trailing: const Icon(Icons.chevron_right, color: Color(0xFF2563EB)),
+                      onTap: () {
+                        setState(() {
+                          _activeChannel = senior;
+                        });
+                        // Trigger fetchChatMessages when channel is tapped
+                        final elderlyId = senior['elderlyId'] ?? '';
+                        if (elderlyId.isNotEmpty) {
+                          ref.read(caregiverProvider.notifier).fetchChatMessages(elderlyId);
+                        }
+                      },
+                    ),
+                  );
+                },
+              ),
+            ),
+        ],
+      );
+    }
+
+    // Level 2: Isolated Chat Thread View
+    final channelName = _activeChannel!['name'] ?? 'Senior Patient';
+    final activeElderlyId = _activeChannel!['elderlyId'] ?? '';
 
     return Column(
       children: [
-        // Header
+        // Thread Header Bar
         Container(
-          padding: const EdgeInsets.all(18),
+          padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
             color: Colors.white,
-            borderRadius: BorderRadius.circular(28),
+            borderRadius: BorderRadius.circular(20),
             border: Border.all(color: const Color(0xFFF1F5F9)),
-            boxShadow: const [
-              BoxShadow(color: Color(0x0A000000), blurRadius: 10, offset: Offset(0, 4)),
-            ],
           ),
-          child: const Row(
+          child: Row(
             children: [
-              CircleAvatar(
-                backgroundColor: Color(0xFF2563EB),
-                child: Icon(Icons.people, color: Colors.white, size: 20),
+              IconButton(
+                icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+                onPressed: () => setState(() => _activeChannel = null),
               ),
-              SizedBox(width: 12),
-              Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text('Care Team Connect', style: TextStyle(fontSize: 16, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                  Text('Live chat between Caregivers & Family', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
-                ],
+              const SizedBox(width: 8),
+              Expanded(
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      'CHANNEL: $channelName',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                    ),
+                    const Text('Isolated Family & Caregiver Communication', style: TextStyle(fontSize: 10, color: Color(0xFF64748B))),
+                  ],
+                ),
               ),
             ],
           ),
         ),
-        const SizedBox(height: 14),
+        const SizedBox(height: 12),
 
-        // Message Thread
+        // Message List Thread
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(16),
             decoration: BoxDecoration(
               color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
+              borderRadius: BorderRadius.circular(28),
               border: Border.all(color: const Color(0xFFF1F5F9)),
             ),
             child: caregiverState.isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : ListView.separated(
-                    controller: _scrollController,
-                    itemCount: 1, // Scaled with backend messages list
-                    separatorBuilder: (_, __) => const SizedBox(height: 12),
-                    itemBuilder: (context, index) {
-                      const isMe = true;
-
-                      return Row(
-                        mainAxisAlignment: isMe ? MainAxisAlignment.end : MainAxisAlignment.start,
-                        crossAxisAlignment: CrossAxisAlignment.end,
-                        children: [
-                          if (!isMe) ...[
-                            const CircleAvatar(
-                              radius: 14,
-                              backgroundColor: Color(0xFF3B82F6),
-                              child: Text(
-                                'C',
-                                style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                            const SizedBox(width: 8),
-                          ],
-                          Flexible(
+                : messages.isEmpty
+                    ? const Center(
+                        child: Text(
+                          'No messages yet in this channel.\nType below to start communicating.',
+                          textAlign: TextAlign.center,
+                          style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 13),
+                        ),
+                      )
+                    : ListView.separated(
+                        itemCount: messages.length,
+                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                        itemBuilder: (context, index) {
+                          final msg = messages[index];
+                          final isMe = msg.senderId == currentUser?.id;
+                          return Align(
+                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
                             child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                               decoration: BoxDecoration(
                                 color: isMe ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
-                                borderRadius: const BorderRadius.only(
-                                  topLeft: Radius.circular(20),
-                                  topRight: Radius.circular(20),
-                                  bottomLeft: Radius.circular(isMe ? 20 : 4),
-                                  bottomRight: Radius.circular(isMe ? 4 : 20),
-                                ),
+                                borderRadius: BorderRadius.circular(20),
                               ),
-                              child: const Text(
-                                'Care coordination active.',
-                                style: TextStyle(
-                                  color: Colors.white,
-                                  fontSize: 14,
-                                  fontWeight: FontWeight.w600,
-                                ),
-                              ),
-                            ),
-                          ),
-                          if (isMe) ...[
-                            const SizedBox(width: 8),
-                            CircleAvatar(
-                              radius: 14,
-                              backgroundColor: const Color(0xFF0F172A),
-                              child: Text(
-                                authUser?.name.isNotEmpty == true ? authUser!.name.substring(0, 1).toUpperCase() : 'U',
-                                style: const TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold),
+                              child: Column(
+                                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                children: [
+                                  Text(
+                                    msg.senderName,
+                                    style: TextStyle(
+                                      fontSize: 10,
+                                      fontWeight: FontWeight.bold,
+                                      color: isMe ? Colors.white70 : const Color(0xFF64748B),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 2),
+                                  Text(
+                                    msg.text,
+                                    style: TextStyle(
+                                      color: isMe ? Colors.white : const Color(0xFF0F172A),
+                                      fontWeight: FontWeight.w600,
+                                      fontSize: 13,
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ],
-                        ],
-                      );
-                    },
-                  ),
+                          );
+                        },
+                      ),
           ),
         ),
         const SizedBox(height: 12),
 
-        // Input Field
+        // Message Input Box
         Row(
           children: [
             Expanded(
               child: TextField(
-                controller: _msgController,
-                onSubmitted: (_) => _send(),
+                controller: _textController,
                 decoration: InputDecoration(
-                  hintText: 'Type a message to the care team...',
+                  hintText: 'Type message for $channelName care team...',
+                  filled: true,
                   fillColor: Colors.white,
                   contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
                   border: OutlineInputBorder(
@@ -186,17 +231,33 @@ class _ChatViewState extends ConsumerState<ChatView> {
               ),
             ),
             const SizedBox(width: 8),
-            IconButton.filled(
-              onPressed: _send,
-              icon: const Icon(Icons.send),
-              style: IconButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
-                padding: const EdgeInsets.all(16),
+            CircleAvatar(
+              radius: 26,
+              backgroundColor: const Color(0xFF2563EB),
+              child: IconButton(
+                icon: const Icon(Icons.send, color: Colors.white, size: 20),
+                onPressed: () async {
+                  final text = _textController.text.trim();
+                  if (text.isNotEmpty && activeElderlyId.isNotEmpty) {
+                    final success = await ref.read(caregiverProvider.notifier).sendChatMessage(
+                          elderlyId: activeElderlyId,
+                          messageText: text,
+                        );
+                    if (success) {
+                      _textController.clear();
+                      if (mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(content: Text('Message sent to channel!')),
+                        );
+                      }
+                    }
+                  }
+                },
               ),
             ),
           ],
         ),
-        const SizedBox(height: 8),
+        const SizedBox(height: 16),
       ],
     );
   }

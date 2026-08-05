@@ -6,6 +6,8 @@ import 'core/widgets/bottom_navigation_bar.dart';
 import 'core/widgets/global_sos_overlay.dart';
 import 'features/auth/providers/auth_provider.dart';
 import 'features/auth/views/auth_flow_view.dart';
+import 'features/caregiver/views/account_settings_view.dart';
+import 'features/caregiver/views/care_connections_view.dart';
 import 'features/caregiver/views/caregiver_status_view.dart';
 import 'features/caregiver/views/chat_view.dart';
 import 'features/caregiver/views/profile_view.dart';
@@ -58,11 +60,12 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                     Container(
                       padding: const EdgeInsets.all(8),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFFEF2F2),
+                        color: const Color(0xFFEFF6FF),
                         borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFFEE2E2)),
+                        border: Border.all(color: const Color(0xFFDBEAFE)),
                       ),
-                      child: const Icon(Icons.favorite, color: Color(0xFFEF4444), size: 20),
+                      // Updated Logo Icon to diversity_1 representing Care Connections
+                      child: const Icon(Icons.diversity_1, color: Color(0xFF2563EB), size: 20),
                     ),
                     const SizedBox(width: 10),
                     const Column(
@@ -115,7 +118,7 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                   SafeArea(
                     child: Padding(
                       padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile'
+                      child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile' && _activeTab != 'account_settings' && _activeTab != 'care_connections'
                           ? const ElderlyView()
                           : _buildMainContent(user.role),
                     ),
@@ -152,7 +155,14 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
       case 'chat':
         return const ChatView();
       case 'profile':
-        return const ProfileView();
+        return ProfileView(
+          onNavigateToAccountSettings: () => _setActiveTab('account_settings'),
+          onNavigateToCareConnections: () => _setActiveTab('care_connections'),
+        );
+      case 'account_settings':
+        return const AccountSettingsView();
+      case 'care_connections':
+        return const CareConnectionsView();
       default:
         return FamilyDashboardView(
           onNavigateToReports: () => _setActiveTab('reports'),

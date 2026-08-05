@@ -1,13 +1,23 @@
 // lib/features/caregiver/views/profile_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../auth/providers/auth_provider.dart';
 import '../../elderly/widgets/pairing_code_modal.dart';
 import '../../family/views/family_pairing_view.dart';
+import 'account_settings_view.dart';
+import 'care_connections_view.dart';
 import 'pairing_view.dart';
 
 class ProfileView extends ConsumerWidget {
-  const ProfileView({super.key});
+  final VoidCallback? onNavigateToAccountSettings;
+  final VoidCallback? onNavigateToCareConnections;
+
+  const ProfileView({
+    super.key,
+    this.onNavigateToAccountSettings,
+    this.onNavigateToCareConnections,
+  });
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -155,25 +165,36 @@ class ProfileView extends ConsumerWidget {
                   const Divider(height: 1, indent: 60),
                 ],
 
+                // 4. Account Settings Option
                 ListTile(
                   leading: const Icon(Icons.settings_outlined, color: Color(0xFF2563EB)),
                   title: const Text('Account Settings', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                   trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Account Settings opened.')),
-                    );
+                    if (onNavigateToAccountSettings != null) {
+                      onNavigateToAccountSettings!();
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const AccountSettingsView()),
+                      );
+                    }
                   },
                 ),
                 const Divider(height: 1, indent: 60),
+
+                // 5. Care Connections Option (Formerly Emergency Contacts)
                 ListTile(
-                  leading: const Icon(Icons.phone_in_talk_outlined, color: Color(0xFFEF4444)),
-                  title: const Text('Emergency Contacts', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
+                  leading: const Icon(Icons.diversity_1, color: Color(0xFF2563EB)),
+                  title: const Text('Care Connections', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                   trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                   onTap: () {
-                    ScaffoldMessenger.of(context).showSnackBar(
-                      const SnackBar(content: Text('Emergency Contacts opened.')),
-                    );
+                    if (onNavigateToCareConnections != null) {
+                      onNavigateToCareConnections!();
+                    } else {
+                      Navigator.of(context).push(
+                        MaterialPageRoute(builder: (context) => const CareConnectionsView()),
+                      );
+                    }
                   },
                 ),
               ],

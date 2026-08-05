@@ -1,4 +1,3 @@
-// lib/features/family/providers/family_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -10,6 +9,9 @@ class FamilyDashboardState {
   final CareReport? latestReport;
   final ChatMessage? latestMessage;
   final List<Map<String, String>> linkedSeniors; // Added for linked elderly list
+  final List<ChatMessage> currentChatMessages;   // Isolated channel thread messages
+  final List<dynamic> activeCaregivers;           // Care connections list
+  final List<dynamic> activeFamilyMembers;        // Care connections list
   final String selectedElderlyId;                // Selected active senior context
   final int totalReportsCount;
   final bool isLoading;
@@ -20,6 +22,9 @@ class FamilyDashboardState {
     this.latestReport,
     this.latestMessage,
     this.linkedSeniors = const [],
+    this.currentChatMessages = const [],
+    this.activeCaregivers = const [],
+    this.activeFamilyMembers = const [],
     this.selectedElderlyId = '',
     this.totalReportsCount = 0,
     this.isLoading = false,
@@ -31,6 +36,9 @@ class FamilyDashboardState {
     CareReport? latestReport,
     ChatMessage? latestMessage,
     List<Map<String, String>>? linkedSeniors,
+    List<ChatMessage>? currentChatMessages,
+    List<dynamic>? activeCaregivers,
+    List<dynamic>? activeFamilyMembers,
     String? selectedElderlyId,
     int? totalReportsCount,
     bool? isLoading,
@@ -42,6 +50,9 @@ class FamilyDashboardState {
       latestReport: latestReport ?? this.latestReport,
       latestMessage: latestMessage ?? this.latestMessage,
       linkedSeniors: linkedSeniors ?? this.linkedSeniors,
+      currentChatMessages: currentChatMessages ?? this.currentChatMessages,
+      activeCaregivers: activeCaregivers ?? this.activeCaregivers,
+      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,
       selectedElderlyId: selectedElderlyId ?? this.selectedElderlyId,
       totalReportsCount: totalReportsCount ?? this.totalReportsCount,
       isLoading: isLoading ?? this.isLoading,
@@ -114,6 +125,40 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     await fetchDashboardData(elderlyId);
   }
 
+  // Fetch Care Connections for Selected Senior
+  Future<void> fetchCareConnections(String elderlyId) async {
+    final token = _token;
+    if (token == null) return;
+
+    try {
+      final data = await _service.getCareConnections(token, elderlyId);
+      state = state.copyWith(
+        activeCaregivers: data['caregivers'] as List<dynamic>? ?? [],
+        activeFamilyMembers: data['familyMembers'] as List<dynamic>? ?? [],
+      );
+    } catch (e) {
+      _handleException(e);
+    }
+  }
+
+  // Delete / Remove Care Connection (Enforcing Family Role Privileges)
+  Future<bool> deleteCareConnection(String connectionId) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.deleteCareConnection(token, connectionId);
+      if (state.selectedElderlyId.isNotEmpty) {
+        await fetchCareConnections(state.selectedElderlyId);
+      }
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
   // Fetch Dashboard Monitoring Data for Selected Senior
   Future<void> fetchDashboardData(String elderlyId) async {
     final token = _token;
@@ -123,7 +168,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     try {
       final reports = await _service.getCareReports(token, elderlyId);
       final healthRecords = await _service.getHealthRecords(token, elderlyId);
-      final moods = await _service.getElderlyMoods(token, elderlyId);
+      final chatMsgs = await _service.getChatMessages(token: token, elderlyId: elderlyId);
 
       final latestReport = reports.isNotEmpty
           ? CareReport.fromJson(reports.first as Map<String, dynamic>)
@@ -131,19 +176,64 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
       final latestVital = healthRecords.isNotEmpty
           ? HealthVitals.fromJson(healthRecords.first as Map<String, dynamic>)
           : null;
-      final latestMessage = moods.isNotEmpty
-          ? ChatMessage.fromJson(moods.first as Map<String, dynamic>)
-          : null;
+      final latestMessage = chatMsgs.isNotEmpty ? chatMsgs.last : null;
 
       state = state.copyWith(
         latestVital: latestVital,
         latestReport: latestReport,
         latestMessage: latestMessage,
+        currentChatMessages: chatMsgs,
         totalReportsCount: reports.length,
         isLoading: false,
       );
+
+      await fetchCareConnections(elderlyId);
     } catch (e) {
-      state = state.copyWith(isLoading: false, errorMessage: e.toString());
+      _handleException(e);
+    }
+  }
+
+  // Fetch Isolated Chat Messages Thread
+  Future<void> fetchChatMessages(String elderlyId) async {
+    final token = _token;
+    if (token == null) return;
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      final messages = await _service.getChatMessages(
+        token: token,
+        elderlyId: elderlyId,
+      );
+      state = state.copyWith(
+        currentChatMessages: messages,
+        latestMessage: messages.isNotEmpty ? messages.last : state.latestMessage,
+        isLoading: false,
+      );
+    } catch (e) {
+      _handleException(e);
+    }
+  }
+
+  // Send Message to Isolated Family Channel
+  Future<bool> sendChatMessage({
+    required String elderlyId,
+    required String messageText,
+    String? receiverId,
+  }) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
+
+    try {
+      await _service.sendMessage(
+        token: token,
+        elderlyId: elderlyId,
+        messageText: messageText,
+        receiverId: receiverId,
+      );
+      await fetchChatMessages(elderlyId); // Refresh thread immediately
+      return true;
+    } catch (e) {
+      return _handleException(e);
     }
   }
 
@@ -167,4 +257,4 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
 // 4. Global Family Riverpod Provider
 final familyDashboardProvider = StateNotifierProvider<FamilyDashboardNotifier, FamilyDashboardState>((ref) {
   return FamilyDashboardNotifier(ref.watch(familyServiceProvider), ref);
-});
+}); 

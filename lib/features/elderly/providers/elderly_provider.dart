@@ -6,23 +6,29 @@ import '../services/elderly_service.dart';
 // 1. Immutable Elderly State
 class ElderlyState {
   final List<Reminder> reminders;
+  final List<dynamic> activeCaregivers;   // Care connections
+  final List<dynamic> activeFamilyMembers; // Care connections
   final bool isSosActive;
   final bool isAudioEnabled;
-  final bool isLinked; // Added isLinked field
+  final bool isLinked;
   final bool isLoading;
   final String? errorMessage;
 
   const ElderlyState({
     this.reminders = const [],
+    this.activeCaregivers = const [],
+    this.activeFamilyMembers = const [],
     this.isSosActive = false,
     this.isAudioEnabled = true,
-    this.isLinked = false, // Default unlinked for new elderly users
+    this.isLinked = false,
     this.isLoading = false,
     this.errorMessage,
   });
 
   ElderlyState copyWith({
     List<Reminder>? reminders,
+    List<dynamic>? activeCaregivers,
+    List<dynamic>? activeFamilyMembers,
     bool? isSosActive,
     bool? isAudioEnabled,
     bool? isLinked,
@@ -32,6 +38,8 @@ class ElderlyState {
   }) {
     return ElderlyState(
       reminders: reminders ?? this.reminders,
+      activeCaregivers: activeCaregivers ?? this.activeCaregivers,
+      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,
       isSosActive: isSosActive ?? this.isSosActive,
       isAudioEnabled: isAudioEnabled ?? this.isAudioEnabled,
       isLinked: isLinked ?? this.isLinked,
@@ -55,7 +63,7 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     state = state.copyWith(isAudioEnabled: !state.isAudioEnabled);
   }
 
-  // Fetch reminders and check active pairing status
+  // Fetch reminders, active pairing status, and care connections
   Future<void> fetchReminders() async {
     final token = _ref.read(authProvider).token;
     if (token == null) return;
@@ -73,11 +81,50 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
         isLinked: isLinked,
         isLoading: false,
       );
+
+      await fetchCareConnections();
     } catch (e) {
       state = state.copyWith(
         isLoading: false,
         errorMessage: e.toString().replaceFirst('Exception: ', ''),
       );
+    }
+  }
+
+  // Fetch Care Connections (Caregivers and Family Members)
+  Future<void> fetchCareConnections() async {
+    final token = _ref.read(authProvider).token;
+    if (token == null) return;
+
+    try {
+      final data = await _service.getCareConnections(token);
+      state = state.copyWith(
+        activeCaregivers: data['caregivers'] as List<dynamic>? ?? [],
+        activeFamilyMembers: data['familyMembers'] as List<dynamic>? ?? [],
+      );
+    } catch (e) {
+      state = state.copyWith(
+        errorMessage: e.toString().replaceFirst('Exception: ', ''),
+      );
+    }
+  }
+
+  // Delete Care Connection (Elderly has full rights to remove any link)
+  Future<bool> deleteCareConnection(String connectionId) async {
+    final token = _ref.read(authProvider).token;
+    if (token == null) return false;
+
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.deleteCareConnection(token, connectionId);
+      await fetchReminders(); // Refresh status and connection list
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString().replaceFirst('Exception: ', ''),
+      );
+      return false;
     }
   }
 
