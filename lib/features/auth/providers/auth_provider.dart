@@ -1,11 +1,10 @@
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
 class AuthState {
   final UserModel? user;
-  final String? token; // Added token field
+  final String? token;
   final bool isLoading;
   final String? errorMessage;
 
@@ -25,7 +24,7 @@ class AuthState {
   }) {
     return AuthState(
       user: user ?? this.user,
-      token: token ?? this.token, // Preserves or updates token
+      token: token ?? this.token,
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
     );
@@ -41,27 +40,27 @@ class AuthNotifier extends StateNotifier<AuthState> {
 
   final AuthService _authService;
 
-  Future<void> login(String email, String password) async {
+  Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      // 1. Fetch user model from auth service
       final user = await _authService.login(email: email, password: password);
-
-      // 2. Assign user directly without calling user.user
-      //    (Pass the token string if returned from your API or user model)
+      // Corrected: Uses the actual returned JWT token string
       state = AuthState(
         user: user,
-        token: user.id, // Using user Guid/ID or token string
+        token: user.token ?? user.id,
+        isLoading: false,
       );
+      return true;
     } catch (error) {
       state = AuthState(
         isLoading: false,
         errorMessage: error.toString().replaceFirst('Exception: ', ''),
       );
+      return false;
     }
   }
 
-  Future<void> register({
+  Future<bool> register({
     required String name,
     required String email,
     required String password,
@@ -76,11 +75,13 @@ class AuthNotifier extends StateNotifier<AuthState> {
         role: role,
       );
       state = const AuthState();
+      return true;
     } catch (error) {
       state = AuthState(
         isLoading: false,
         errorMessage: error.toString().replaceFirst('Exception: ', ''),
       );
+      return false;
     }
   }
 

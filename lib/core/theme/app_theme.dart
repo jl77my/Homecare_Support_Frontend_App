@@ -1,37 +1,103 @@
 import 'package:flutter/material.dart';
 
 class AppTheme {
-  // High-contrast colors for visibility (cite: 297)
-  static const Color primaryBlue = Color(0xFF0056b3); 
-  static const Color alertRed = Color(0xFFD32F2F); // For SOS button (cite: 298)
-  static const Color backgroundWhite = Color(0xFFFFFFFF);
-  static const Color textBlack = Color(0xFF000000);
+  // Brand Colors
+  static const Color primaryDark = Color(0xFF171717);
+  static const Color primaryBlue = Color(0xFF2563EB);
+  static const Color primaryRed = Color(0xFFEF4444);
+  static const Color primaryGreen = Color(0xFF10B981);
+  static const Color primaryAmber = Color(0xFFF59E0B);
+  
+  static const Color bgLight = Color(0xFFFDFDFD);
+  static const Color surfaceCard = Colors.white;
+  static const Color borderLight = Color(0xFFF1F5F9);
+  static const Color borderSubtle = Color(0xFFE2E8F0);
+  
+  static const Color textMain = Color(0xFF0F172A);
+  static const Color textMuted = Color(0xFF64748B);
 
   static ThemeData get lightTheme {
     return ThemeData(
-      primaryColor: primaryBlue,
-      scaffoldBackgroundColor: backgroundWhite,
-      
-      // Defining large text sizes for elderly readability (cite: 304)
-      textTheme: const TextTheme(
-        displayLarge: TextStyle(
-          fontSize: 40, // Range 36-48 as per research (cite: 304)
-          fontWeight: FontWeight.bold,
-          color: textBlack,
-        ),
-        bodyLarge: TextStyle(
-          fontSize: 22, // Enhanced size for general reading
-          color: textBlack,
+      useMaterial3: true,
+      scaffoldBackgroundColor: bgLight,
+      colorScheme: ColorScheme.fromSeed(
+        seedColor: primaryBlue,
+        primary: primaryBlue,
+        secondary: primaryDark,
+        surface: surfaceCard,
+        error: primaryRed,
+      ),
+      fontFamily: 'Roboto',
+      appBarTheme: const AppBarTheme(
+        backgroundColor: Colors.white,
+        elevation: 0,
+        scrolledUnderElevation: 0.5,
+        centerTitle: false,
+        iconTheme: IconThemeData(color: primaryDark),
+        titleTextStyle: TextStyle(
+          color: primaryDark,
+          fontSize: 18,
+          fontWeight: FontWeight.w800,
+          letterSpacing: -0.5,
         ),
       ),
-
-      // Ensuring buttons meet the minimum size requirement (cite: 305)
+      cardTheme: CardTheme(
+        color: surfaceCard,
+        elevation: 0,
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(28),
+          side: const BorderSide(color: borderLight, width: 1.5),
+        ),
+      ),
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
-          minimumSize: const Size(150, 60), // Supporting easier tapping (cite: 312)
-          backgroundColor: primaryBlue,
+          elevation: 0,
+          backgroundColor: primaryDark,
           foregroundColor: Colors.white,
-          textStyle: const TextStyle(fontSize: 24, fontWeight: FontWeight.bold),
+          padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 14,
+            fontWeight: FontWeight.w800,
+            letterSpacing: 0.5,
+          ),
+        ),
+      ),
+      outlinedButtonTheme: OutlinedButtonThemeData(
+        style: OutlinedButton.styleFrom(
+          padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
+          side: const BorderSide(color: borderSubtle, width: 1.5),
+          shape: RoundedRectangleBorder(
+            borderRadius: BorderRadius.circular(20),
+          ),
+          textStyle: const TextStyle(
+            fontSize: 13,
+            fontWeight: FontWeight.w700,
+          ),
+        ),
+      ),
+      inputDecorationTheme: InputDecorationTheme(
+        filled: true,
+        fillColor: const Color(0xFFF8FAFC),
+        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
+        border: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: borderSubtle),
+        ),
+        enabledBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: borderSubtle),
+        ),
+        focusedBorder: OutlineInputBorder(
+          borderRadius: BorderRadius.circular(20),
+          borderSide: const BorderSide(color: primaryBlue, width: 2),
+        ),
+        hintStyle: const TextStyle(
+          color: Color(0xFF94A3B8),
+          fontSize: 14,
+          fontWeight: FontWeight.w500,
         ),
       ),
     );

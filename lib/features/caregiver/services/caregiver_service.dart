@@ -7,7 +7,7 @@ class CaregiverService {
         _baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE_URL',
-              defaultValue: 'http://localhost:3000/api',
+              defaultValue: 'http://localhost:3000/api', // 10.0.2.2 for Android Emulator
             );
 
   final http.Client _client;
@@ -18,7 +18,7 @@ class CaregiverService {
         'Authorization': 'Bearer $token',
       };
 
-  // 1. Function 1: Assign Care Task (cite: 1, 2)
+  // 1. Assign Care Task
   Future<Map<String, dynamic>> createTask({
     required String token,
     required String title,
@@ -39,7 +39,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 2. Function 2: Schedule Medication (cite: 1, 2)
+  // 2. Schedule Medication
   Future<Map<String, dynamic>> scheduleMedication({
     required String token,
     required String patientId,
@@ -60,7 +60,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 3. Function 3: Record Health Data & Receive Alerts (cite: 1, 2)
+  // 3. Record Health Data & Receive Rule Alerts
   Future<Map<String, dynamic>> recordHealth({
     required String token,
     required String patientId,
@@ -83,7 +83,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 4. Function 4: Submit Care Report (cite: 1, 2)
+  // 4. Submit Care Report with Optional Photo Attachment
   Future<Map<String, dynamic>> submitCareReport({
     required String token,
     required String patientId,
@@ -106,7 +106,7 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 5. Function 5: Send In-App Message (cite: 1, 2)
+  // 5. Send In-App Message
   Future<Map<String, dynamic>> sendMessage({
     required String token,
     required String receiverId,

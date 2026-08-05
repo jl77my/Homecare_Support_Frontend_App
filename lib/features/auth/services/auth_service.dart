@@ -1,7 +1,5 @@
 import 'dart:convert';
-
 import 'package:http/http.dart' as http;
-
 import '../models/user_model.dart';
 
 class AuthService {
@@ -10,7 +8,7 @@ class AuthService {
         _baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE_URL',
-              defaultValue: 'http://localhost:3000/api',
+              defaultValue: 'http://localhost:3000/api', // 10.0.2.2 for Android Emulator
             );
 
   final http.Client _client;
@@ -52,12 +50,6 @@ class AuthService {
         headers: const {'Content-Type': 'application/json'},
         body: jsonEncode(payload),
       );
-    } on http.ClientException catch (error) {
-      throw Exception(
-        'Network request failed. If you are running Flutter web, the backend at '
-        '$_baseUrl must allow CORS for the app origin and respond to OPTIONS '
-        'preflight requests. Original error: ${error.message}',
-      );
     } catch (error) {
       throw Exception('Network request failed: $error');
     }
@@ -78,15 +70,9 @@ class AuthService {
   }
 
   Map<String, dynamic> _decodeResponse(String body) {
-    if (body.isEmpty) {
-      return const <String, dynamic>{};
-    }
-
+    if (body.isEmpty) return const <String, dynamic>{};
     final decoded = jsonDecode(body);
-    if (decoded is Map<String, dynamic>) {
-      return decoded;
-    }
-
+    if (decoded is Map<String, dynamic>) return decoded;
     return <String, dynamic>{'data': decoded};
   }
 }
