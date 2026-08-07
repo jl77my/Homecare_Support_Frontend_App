@@ -16,11 +16,35 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
 
   Future<void> _handleGenerate() async {
     setState(() => _isGenerating = true);
+    
+    // Call the Riverpod provider to generate the code
     final code = await ref.read(elderlyProvider.notifier).generatePairingCode(_selectedRole);
-    setState(() {
-      _generatedCode = code;
-      _isGenerating = false;
-    });
+
+    // Ensure the widget is still mounted in the widget tree before updating the UI
+    if (!mounted) return;
+
+    if (code != null) {
+      // Success: Display the generated code
+      setState(() {
+        _generatedCode = code;
+        _isGenerating = false;
+      });
+    } else {
+      // Failure: Stop the loading spinner and display the error message
+      setState(() => _isGenerating = false);
+      
+      // Retrieve the error message caught by the ElderlyNotifier
+      final errorMsg = ref.read(elderlyProvider).errorMessage ?? 'Failed to generate code. Please try again.';
+      
+      // Trigger a SnackBar to inform the user
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(errorMsg),
+          backgroundColor: const Color(0xFFDC2626), // Clear red danger color
+          duration: const Duration(seconds: 4),
+        ),
+      );
+    }
   }
 
   @override
@@ -66,7 +90,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                 child: ChoiceChip(
                   label: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Caregiver Code', style: TextStyle(fontWeight: FontWeight.w800)),
+                    child: Text('Caregiver', style: TextStyle(fontWeight: FontWeight.w800)),
                   ),
                   selected: _selectedRole == 'caregiver',
                   onSelected: (_) => setState(() {
@@ -82,7 +106,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                 child: ChoiceChip(
                   label: const Padding(
                     padding: EdgeInsets.symmetric(vertical: 8),
-                    child: Text('Family Code', style: TextStyle(fontWeight: FontWeight.w800)),
+                    child: Text('Family', style: TextStyle(fontWeight: FontWeight.w800)),
                   ),
                   selected: _selectedRole == 'family',
                   onSelected: (_) => setState(() {

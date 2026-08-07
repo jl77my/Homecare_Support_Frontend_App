@@ -102,7 +102,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     if (token == null) return;
 
     try {
-      final seniors = await _service.getLinkedSeniors(token);
+      final seniors = await _service.getLinkedElderly(token);
       String currentActive = state.selectedElderlyId;
       if (currentActive.isEmpty && seniors.isNotEmpty) {
         currentActive = seniors.first['elderlyId'] ?? '';

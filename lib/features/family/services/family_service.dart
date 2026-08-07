@@ -37,7 +37,7 @@ class FamilyService {
   }
 
   // 2. Fetch Linked Elderly List for Family Member
-  Future<List<Map<String, String>>> getLinkedSeniors(String token) async {
+  Future<List<Map<String, String>>> getLinkedElderly(String token) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/family/linked-elderly'),
       headers: _headers(token),
