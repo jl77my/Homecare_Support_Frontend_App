@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:intl/intl.dart'; // REQUIRED FOR DATE FORMATTING
 import '../../../core/models/enums.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../caregiver/providers/caregiver_provider.dart';
@@ -199,6 +200,10 @@ class _TasksViewState extends ConsumerState<TasksView> {
             itemBuilder: (context, index) {
               final task = displayedTasks[index];
               final isDone = task.status == TaskStatus.done;
+              
+              // FIX: Format Date with intl package
+              final formattedDate = DateFormat('MMM dd, yyyy - hh:mm a').format(task.scheduledTime);
+
               return Container(
                 margin: const EdgeInsets.symmetric(horizontal: 16),
                 padding: const EdgeInsets.all(18),
@@ -242,6 +247,11 @@ class _TasksViewState extends ConsumerState<TasksView> {
                               color: isDone ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
                               decoration: isDone ? TextDecoration.lineThrough : null,
                             ),
+                          ),
+                          const SizedBox(height: 4),
+                          Text(
+                            '🗓️ $formattedDate', 
+                            style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
                           ),
                           if (task.description.isNotEmpty) ...[
                             const SizedBox(height: 2),

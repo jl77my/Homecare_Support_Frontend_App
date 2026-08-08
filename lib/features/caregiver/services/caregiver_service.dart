@@ -19,7 +19,6 @@ class CaregiverService {
         'Authorization': 'Bearer $token',
       };
 
-  // 1. Redeem Senior Pairing Code (PairingView)
   Future<Map<String, dynamic>> pairWithElderly({
     required String token,
     required String code,
@@ -32,7 +31,6 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 2. Fetch Assigned Seniors for PatientSelectorBar
   Future<List<Map<String, String>>> getAssignedSeniors(String token) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/caregiver/assigned-patients'),
@@ -49,8 +47,6 @@ class CaregiverService {
     }).toList();
   }
 
-  // 3. Assign Care Task
-  // Fix the Create Task URL to include the patientId
   Future<Map<String, dynamic>> createTask({
     required String token,
     required String title,
@@ -59,7 +55,7 @@ class CaregiverService {
     required String assignedTo,
   }) async {
     final response = await _client.post(
-      Uri.parse('$_baseUrl/caregiver/tasks/$assignedTo'), // Ensure this matches backend route
+      Uri.parse('$_baseUrl/caregiver/tasks/$assignedTo'),
       headers: _headers(token),
       body: jsonEncode({
         'title': title,
@@ -70,7 +66,6 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // Add the Update Task Status method
   Future<Map<String, dynamic>> updateTaskStatus({
     required String token,
     required String taskId,
@@ -96,13 +91,16 @@ class CaregiverService {
     return data['tasks'] as List<dynamic>? ?? [];
   }
 
-  // 4. Schedule Medication
   Future<Map<String, dynamic>> scheduleMedication({
     required String token,
     required String patientId,
     required String medicationName,
     required String dosage,
+    required String scheduledDate, 
     required String scheduledTime,
+    required String category,
+    required String frequency,
+    String? notes,
   }) async {
     final response = await _client.post(
       Uri.parse('$_baseUrl/caregiver/medications'),
@@ -111,13 +109,16 @@ class CaregiverService {
         'patientId': patientId,
         'medicationName': medicationName,
         'dosage': dosage,
+        'scheduledDate': scheduledDate, 
         'scheduledTime': scheduledTime,
+        'category': category,
+        'frequency': frequency,
+        'notes': notes,
       }),
     );
     return _parseResponse(response);
   }
 
-  // 5. Record Health Data
   Future<Map<String, dynamic>> recordHealth({
     required String token,
     required String patientId,
@@ -140,7 +141,6 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 6. Submit Care Report
   Future<Map<String, dynamic>> submitCareReport({
     required String token,
     required String patientId,
@@ -163,7 +163,6 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 7. Fetch Isolated Chat Messages for Elderly Channel
   Future<List<ChatMessage>> getChatMessages({
     required String token,
     required String elderlyId,
@@ -177,7 +176,6 @@ class CaregiverService {
     return rawList.map((json) => ChatMessage.fromJson(json)).toList();
   }
 
-  // 8. Send In-App Message to Channel
   Future<Map<String, dynamic>> sendMessage({
     required String token,
     required String elderlyId,
@@ -196,7 +194,6 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-// 9. Fetch Care Connections for Active Elderly Context
   Future<Map<String, dynamic>> getCareConnections(String token, String elderlyId) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/user/care-connections?elderlyId=$elderlyId'),
@@ -205,7 +202,6 @@ class CaregiverService {
     return _parseResponse(response);
   }
 
-  // 10. Delete / Unlink Care Connection
   Future<void> deleteCareConnection(String token, String connectionId) async {
     final response = await _client.delete(
       Uri.parse('$_baseUrl/user/care-connections/$connectionId'),
@@ -223,4 +219,3 @@ class CaregiverService {
     throw Exception(message);
   }
 }
-

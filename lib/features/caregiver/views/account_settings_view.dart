@@ -21,7 +21,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
     super.initState();
     final user = ref.read(authProvider).user;
     _nameController = TextEditingController(text: user?.name ?? '');
-    _phoneController = TextEditingController(text: '+60123456789'); // Demo phone
+    _phoneController = TextEditingController(text: '-');
     _emailController = TextEditingController(text: user?.email ?? '');
   }
 

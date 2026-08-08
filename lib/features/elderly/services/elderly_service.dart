@@ -18,7 +18,6 @@ class ElderlyService {
         'Authorization': 'Bearer $token',
       };
 
-  // 1. Check if Elderly User has active Caregiver or Family links
   Future<bool> checkPairingStatus(String token) async {
     try {
       final response = await _client.get(
@@ -32,21 +31,33 @@ class ElderlyService {
     }
   }
 
-  // 2. Fetch Scheduled Medications
-  Future<List<dynamic>> getMedications(String token) async {
+  Future<List<dynamic>> getMedications(String token, {String? elderlyId}) async {
+    final url = elderlyId != null && elderlyId.isNotEmpty
+        ? '$_baseUrl/elderly/medications?elderlyId=$elderlyId'
+        : '$_baseUrl/elderly/medications';
+        
     final response = await _client.get(
-      Uri.parse('$_baseUrl/elderly/medications'),
+      Uri.parse(url),
       headers: _headers(token),
     );
     final data = _parseResponse(response);
     return data['medications'] as List<dynamic>? ?? [];
   }
 
-  // 3. Confirm Medication Intake
+  Future<void> deleteMedication({required String token, required String medicationId}) async {
+    final response = await _client.delete(
+      Uri.parse('$_baseUrl/elderly/medications/$medicationId'),
+      headers: _headers(token),
+    );
+    _parseResponse(response);
+  }
+
+  // FIX: Added elderlyId parameter
   Future<Map<String, dynamic>> confirmMedication({
     required String token,
     required String medicationId,
     required String status,
+    String? elderlyId,
   }) async {
     final response = await _client.post(
       Uri.parse('$_baseUrl/elderly/medications/confirm'),
@@ -54,12 +65,12 @@ class ElderlyService {
       body: jsonEncode({
         'medicationId': medicationId,
         'status': status,
+        'elderlyId': elderlyId,
       }),
     );
     return _parseResponse(response);
   }
 
-  // 4. Log Mood
   Future<Map<String, dynamic>> logMood({
     required String token,
     required String mood,
@@ -72,7 +83,6 @@ class ElderlyService {
     return _parseResponse(response);
   }
 
-  // 5. Trigger SOS Alert
   Future<Map<String, dynamic>> triggerSos({required String token}) async {
     final response = await _client.post(
       Uri.parse('$_baseUrl/elderly/sos'),
@@ -82,7 +92,6 @@ class ElderlyService {
     return _parseResponse(response);
   }
 
-  // 6. Generate Temporary Pairing Code
   Future<Map<String, dynamic>> generatePairingCode({
     required String token,
     required String roleTarget,
@@ -95,7 +104,6 @@ class ElderlyService {
     return _parseResponse(response);
   }
 
-  // 7. Fetch Care Connections
   Future<Map<String, dynamic>> getCareConnections(String token) async {
     final response = await _client.get(
       Uri.parse('$_baseUrl/user/care-connections'),
@@ -104,7 +112,6 @@ class ElderlyService {
     return _parseResponse(response);
   }
 
-  // 8. Delete / Unlink Care Connection (Elderly has full permission to delete any link)
   Future<void> deleteCareConnection(String token, String connectionId) async {
     final response = await _client.delete(
       Uri.parse('$_baseUrl/user/care-connections/$connectionId'),

@@ -1,3 +1,4 @@
+import 'package:intl/intl.dart';
 import 'enums.dart';
 
 // 1. Registered User Profile Entity
@@ -29,7 +30,7 @@ class RegisteredUser {
   }
 }
 
-// 2. Reminder Model (Medications / Appointments) (cite: 1)
+// 2. Reminder Model (Medications / Appointments)
 class Reminder {
   final String id;
   final String elderlyId;
@@ -94,24 +95,39 @@ class Reminder {
   }
 
   factory Reminder.fromJson(Map<String, dynamic> json) {
+    String? parsedCompletedAt;
+    if (json['CompletedAt'] != null) {
+      try {
+        parsedCompletedAt = DateFormat('hh:mm a').format(DateTime.parse(json['CompletedAt']).toLocal());
+      } catch (_) {}
+    }
+
     return Reminder(
       id: json['Id'] ?? json['id'] ?? '',
-      elderlyId: json['ElderlyId'] ?? json['patientId'] ?? '',
+      // Fixed: Mapped to ElderlyId
+      elderlyId: json['ElderlyId'] ?? json['PatientId'] ?? json['elderlyId'] ?? '',
       title: json['MedicationName'] ?? json['title'] ?? '',
-      category: ReminderCategory.medication,
+      category: ReminderCategory.values.firstWhere(
+        (e) => e.name.toLowerCase() == (json['Category'] ?? '').toString().toLowerCase(),
+        orElse: () => ReminderCategory.medication,
+      ),
       time: json['ScheduledTime'] ?? json['time'] ?? '08:00 AM',
-      date: json['date'] ?? 'Today',
-      frequency: ReminderFrequency.daily,
+      date: json['ScheduledDate'] ?? json['date'] ?? 'Today',
+      frequency: ReminderFrequency.values.firstWhere(
+        (e) => e.name.toLowerCase() == (json['Frequency'] ?? '').toString().toLowerCase(),
+        orElse: () => ReminderFrequency.daily,
+      ),
       dosageOrLocation: json['Dosage'] ?? json['dosageOrLocation'],
       notes: json['Notes'] ?? json['notes'],
       isCompleted: json['Status'] == 'Taken' || (json['isCompleted'] ?? false),
-      createdBy: json['CreatedBy']?.toString(),
+      completedAt: parsedCompletedAt,
+      createdBy: json['CreatorName']?.toString() ?? json['CreatedBy']?.toString(),
       datetimeCreated: json['DatetimeCreated'] != null ? DateTime.tryParse(json['DatetimeCreated']) : null,
     );
   }
 }
 
-// 3. Care Task Model (cite: 1)
+// 3. Care Task Model
 class CareTask {
   final String id;
   final String elderlyId;
@@ -151,7 +167,7 @@ class CareTask {
   }
 }
 
-// 4. Health Vitals Model (cite: 1)
+// 4. Health Vitals Model
 class HealthVitals {
   final String? id;
   final int heartRate;
@@ -184,7 +200,7 @@ class HealthVitals {
   }
 }
 
-// 5. Care Report Model (cite: 1)
+// 5. Care Report Model
 class CareReport {
   final String id;
   final String elderlyId;
@@ -213,7 +229,8 @@ class CareReport {
   factory CareReport.fromJson(Map<String, dynamic> json) {
     return CareReport(
       id: json['Id'] ?? json['id'] ?? '',
-      elderlyId: json['PatientId'] ?? json['elderlyId'] ?? '',
+      // Fixed: Mapped to ElderlyId
+      elderlyId: json['ElderlyId'] ?? json['PatientId'] ?? json['elderlyId'] ?? '',
       caregiverId: json['CreatedBy'] ?? json['caregiverId'] ?? '',
       caregiverName: json['CaregiverName'] ?? 'Caregiver',
       title: json['HealthStatusNotes'] ?? 'Daily Log',
@@ -226,7 +243,7 @@ class CareReport {
   }
 }
 
-// 6. Chat Message Model (cite: 1)
+// 6. Chat Message Model
 class ChatMessage {
   final String id;
   final String elderlyId;

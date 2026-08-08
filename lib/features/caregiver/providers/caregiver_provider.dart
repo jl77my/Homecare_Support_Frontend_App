@@ -3,7 +3,6 @@ import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/caregiver_service.dart';
 
-// 1. Immutable Caregiver State
 class CaregiverState {
   final List<CareTask> tasks;
   final List<HealthVitals> vitals;
@@ -57,10 +56,8 @@ class CaregiverState {
   }
 }
 
-// 2. Service Provider
 final caregiverServiceProvider = Provider<CaregiverService>((ref) => CaregiverService());
 
-// 3. StateNotifier Logic Class
 class CaregiverNotifier extends StateNotifier<CaregiverState> {
   CaregiverNotifier(this._service, this._ref) : super(const CaregiverState());
 
@@ -72,7 +69,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   Future<bool> pairWithElderly(String code) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.pairWithElderly(token: token, code: code);
@@ -87,7 +83,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   Future<void> fetchAssignedSeniors() async {
     final token = _token;
     if (token == null) return;
-
     try {
       final seniors = await _service.getAssignedSeniors(token);
       String currentActive = state.activeElderlyId;
@@ -100,14 +95,13 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
       );
       if (currentActive.isNotEmpty) {
         await fetchCareConnections(currentActive);
-        await fetchCareTasks(currentActive); // Automatically fetch tasks on initial load
+        await fetchCareTasks(currentActive);
       }
     } catch (e) {
       _handleException(e);
     }
   }
 
-  // Unified Single Context Switcher
   void switchElderlyContext(String elderlyId) {
     state = state.copyWith(activeElderlyId: elderlyId);
     fetchCareConnections(elderlyId);
@@ -117,7 +111,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   Future<void> fetchCareConnections(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-
     try {
       final data = await _service.getCareConnections(token, elderlyId);
       state = state.copyWith(
@@ -152,7 +145,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.createTask(
@@ -162,7 +154,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         dueDate: dueDate,
         assignedTo: assignedTo,
       );
-      await fetchCareTasks(assignedTo); // Automatically refresh tasks list
+      await fetchCareTasks(assignedTo);
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -170,11 +162,9 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     }
   }
 
-// Inside CaregiverNotifier class
   Future<bool> updateTaskStatus(String taskId, String status) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.updateTaskStatus(
@@ -183,7 +173,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         status: status,
       );
       
-      // Refresh the tasks list to show the updated UI
       if (state.activeElderlyId.isNotEmpty) {
         await fetchCareTasks(state.activeElderlyId);
       }
@@ -194,11 +183,10 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
       return _handleException(e);
     }
   }
-  
+
   Future<bool> deleteCareConnection(String connectionId) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.deleteCareConnection(token, connectionId);
@@ -216,7 +204,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   Future<void> fetchChatMessages(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final messages = await _service.getChatMessages(
@@ -239,7 +226,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     try {
       await _service.sendMessage(
         token: token,
@@ -258,11 +244,14 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     required String patientId,
     required String medicationName,
     required String dosage,
+    required String scheduledDate, 
     required String scheduledTime,
+    required String category,
+    required String frequency,
+    String? notes,
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.scheduleMedication(
@@ -270,7 +259,11 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         patientId: patientId,
         medicationName: medicationName,
         dosage: dosage,
+        scheduledDate: scheduledDate, 
         scheduledTime: scheduledTime,
+        category: category,
+        frequency: frequency,
+        notes: notes,
       );
       state = state.copyWith(isLoading: false);
       return true;
@@ -288,7 +281,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.recordHealth(
@@ -315,7 +307,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.submitCareReport(
@@ -350,7 +341,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   }
 }
 
-// 4. Global Caregiver Riverpod Provider
 final caregiverProvider = StateNotifierProvider<CaregiverNotifier, CaregiverState>((ref) {
   return CaregiverNotifier(ref.watch(caregiverServiceProvider), ref);
 });

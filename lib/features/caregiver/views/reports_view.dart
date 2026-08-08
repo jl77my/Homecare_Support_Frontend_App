@@ -1,19 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../core/models/enums.dart';
 import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../family/providers/family_provider.dart';
+import '../../family/views/family_pairing_view.dart';
 import '../providers/caregiver_provider.dart';
 import '../services/caregiver_service.dart';
+import '../widgets/patient_selector_bar.dart';
+import 'pairing_view.dart';
 
 class ReportsView extends ConsumerStatefulWidget {
-  final String patientId;
-
-  const ReportsView({
-    super.key,
-    this.patientId = "00000000-0000-0000-0000-000000000000",
-  });
+  const ReportsView({super.key});
 
   @override
   ConsumerState<ReportsView> createState() => _ReportsViewState();
@@ -24,12 +22,18 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
   ReportSeverity? _severityFilter;
   String? _lightboxImageUrl;
 
-  void _showNewReportModal() {
+  void _showNewReportModal(String activeElderlyId) {
+    if (activeElderlyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a senior patient first.')),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => _NewReportModal(patientId: widget.patientId),
+      builder: (context) => _NewReportModal(patientId: activeElderlyId),
     );
   }
 
@@ -37,7 +41,6 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
     final commentController = TextEditingController();
     final authUser = ref.read(authProvider).user;
     final familyName = authUser?.name ?? 'Family Member';
-
     showDialog(
       context: context,
       builder: (context) => AlertDialog(
@@ -94,10 +97,18 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
   @override
   Widget build(BuildContext context) {
     final authUser = ref.watch(authProvider).user;
-    final caregiverState = ref.watch(caregiverProvider);
-    final isCaregiver = authUser?.role == 'caregiver' || authUser?.role == 'Caregiver';
+    final isFamily = authUser?.role.toLowerCase() == 'family';
+    final isCaregiver = authUser?.role.toLowerCase() == 'caregiver';
 
-    final filteredReports = caregiverState.reports.where((r) {
+    final familyState = ref.watch(familyDashboardProvider);
+    final caregiverState = ref.watch(caregiverProvider);
+
+    final activeElderlyId = isFamily ? familyState.selectedElderlyId : caregiverState.activeElderlyId;
+    final assignedSeniors = isFamily ? familyState.linkedSeniors : caregiverState.assignedSeniors;
+    // NOTE: If using dummy reports for Family, replace caregiverState.reports with real fetched ones later.
+    final reports = caregiverState.reports; 
+
+    final filteredReports = reports.where((r) {
       if (_categoryFilter != null && r.category != _categoryFilter) return false;
       if (_severityFilter != null && r.severity != _severityFilter) return false;
       return true;
@@ -108,6 +119,24 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
         ListView(
           padding: const EdgeInsets.only(bottom: 32),
           children: [
+            if (!isFamily && !isCaregiver) const SizedBox.shrink() else 
+              PatientSelectorBar(
+                assignedSeniors: assignedSeniors,
+                selectedElderlyId: activeElderlyId,
+                onElderlySelected: (newElderlyId) {
+                  if (isFamily) {
+                    ref.read(familyDashboardProvider.notifier).switchElderlyContext(newElderlyId);
+                  } else {
+                    ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
+                  }
+                },
+                onPairNewElderly: () {
+                  Navigator.of(context).push(
+                    MaterialPageRoute(builder: (context) => isFamily ? const FamilyPairingView() : const PairingView()),
+                  );
+                },
+              ),
+            
             // Header Card
             Container(
               padding: const EdgeInsets.all(20),
@@ -138,7 +167,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                   ),
                   if (isCaregiver)
                     ElevatedButton.icon(
-                      onPressed: _showNewReportModal,
+                      onPressed: () => _showNewReportModal(activeElderlyId),
                       icon: const Icon(Icons.add_a_photo, size: 16),
                       label: const Text('NEW REPORT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                       style: ElevatedButton.styleFrom(
@@ -151,7 +180,6 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
               ),
             ),
             const SizedBox(height: 16),
-
             // Category Filter Chips
             SingleChildScrollView(
               scrollDirection: Axis.horizontal,
@@ -159,20 +187,19 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                 children: [
                   _buildCategoryChip('All Categories', null),
                   const SizedBox(width: 8),
-                  _buildCategoryChip('📝 Daily Log', ReportCategory.dailyLog),
+                  _buildCategoryChip('  Daily Log', ReportCategory.dailyLog),
                   const SizedBox(width: 8),
-                  _buildCategoryChip('🩹 Wound Care', ReportCategory.injuryWound),
+                  _buildCategoryChip('  Wound Care', ReportCategory.injuryWound),
                   const SizedBox(width: 8),
-                  _buildCategoryChip('🥗 Meal & Food', ReportCategory.mealNutrition),
+                  _buildCategoryChip('  Meal & Food', ReportCategory.mealNutrition),
                   const SizedBox(width: 8),
-                  _buildCategoryChip('🚶 Mobility', ReportCategory.mobilityExercise),
+                  _buildCategoryChip('  Mobility', ReportCategory.mobilityExercise),
                   const SizedBox(width: 8),
-                  _buildCategoryChip('🩺 Medical', ReportCategory.medicalObservation),
+                  _buildCategoryChip('  Medical', ReportCategory.medicalObservation),
                 ],
               ),
             ),
             const SizedBox(height: 12),
-
             // Severity Filter Row
             Row(
               children: [
@@ -188,7 +215,6 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
               ],
             ),
             const SizedBox(height: 16),
-
             // Feed
             if (filteredReports.isEmpty)
               const Padding(
@@ -211,12 +237,11 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                 separatorBuilder: (_, __) => const SizedBox(height: 18),
                 itemBuilder: (context, index) {
                   final report = filteredReports[index];
-                  return _buildReportCard(report, authUser?.role == 'family');
+                  return _buildReportCard(report, isFamily);
                 },
               ),
           ],
         ),
-
         // Lightbox Overlay
         if (_lightboxImageUrl != null)
           Positioned.fill(
@@ -465,7 +490,6 @@ class _NewReportModalState extends ConsumerState<_NewReportModal> {
   final _titleController = TextEditingController();
   final _notesController = TextEditingController();
   final _photoUrlController = TextEditingController();
-
   ReportCategory _category = ReportCategory.dailyLog;
   ReportSeverity _severity = ReportSeverity.routine;
 
@@ -480,14 +504,12 @@ class _NewReportModalState extends ConsumerState<_NewReportModal> {
   Future<void> _submitReport() async {
     final title = _titleController.text.trim();
     final notes = _notesController.text.trim();
-
     if (title.isEmpty || notes.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please provide a title and detailed notes.')),
       );
       return;
     }
-
     final success = await ref.read(caregiverProvider.notifier).submitCareReport(
           patientId: widget.patientId,
           healthStatusNotes: title,
@@ -495,7 +517,6 @@ class _NewReportModalState extends ConsumerState<_NewReportModal> {
           observations: notes,
           photoUrl: _photoUrlController.text.trim().isEmpty ? null : _photoUrlController.text.trim(),
         );
-
     if (success && mounted) {
       Navigator.pop(context);
       ScaffoldMessenger.of(context).showSnackBar(
@@ -515,7 +536,6 @@ class _NewReportModalState extends ConsumerState<_NewReportModal> {
   @override
   Widget build(BuildContext context) {
     final isLoading = ref.watch(caregiverProvider).isLoading;
-
     return Container(
       padding: EdgeInsets.only(
         top: 24,

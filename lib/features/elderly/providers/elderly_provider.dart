@@ -3,11 +3,10 @@ import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../services/elderly_service.dart';
 
-// 1. Immutable Elderly State
 class ElderlyState {
   final List<Reminder> reminders;
-  final List<dynamic> activeCaregivers;   // Care connections
-  final List<dynamic> activeFamilyMembers; // Care connections
+  final List<dynamic> activeCaregivers;
+  final List<dynamic> activeFamilyMembers;
   final bool isSosActive;
   final bool isAudioEnabled;
   final bool isLinked;
@@ -49,10 +48,8 @@ class ElderlyState {
   }
 }
 
-// 2. Global Elderly Service Provider
 final elderlyServiceProvider = Provider<ElderlyService>((ref) => ElderlyService());
 
-// 3. StateNotifier Logic Class
 class ElderlyNotifier extends StateNotifier<ElderlyState> {
   ElderlyNotifier(this._service, this._ref) : super(const ElderlyState());
 
@@ -63,25 +60,20 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     state = state.copyWith(isAudioEnabled: !state.isAudioEnabled);
   }
 
-  // Fetch reminders, active pairing status, and care connections
-  Future<void> fetchReminders() async {
+  Future<void> fetchReminders({String? elderlyId}) async {
     final token = _ref.read(authProvider).token;
     if (token == null) return;
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      final rawList = await _service.getMedications(token);
+      final rawList = await _service.getMedications(token, elderlyId: elderlyId);
       final reminders = rawList.map((json) => Reminder.fromJson(json)).toList();
       
-      // Check if senior is paired with caregiver or family
       final isLinked = await _service.checkPairingStatus(token);
-
       state = state.copyWith(
         reminders: reminders,
         isLinked: isLinked,
         isLoading: false,
       );
-
       await fetchCareConnections();
     } catch (e) {
       state = state.copyWith(
@@ -91,11 +83,9 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     }
   }
 
-  // Fetch Care Connections (Caregivers and Family Members)
   Future<void> fetchCareConnections() async {
     final token = _ref.read(authProvider).token;
     if (token == null) return;
-
     try {
       final data = await _service.getCareConnections(token);
       state = state.copyWith(
@@ -109,15 +99,13 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     }
   }
 
-  // Delete Care Connection (Elderly has full rights to remove any link)
-  Future<bool> deleteCareConnection(String connectionId) async {
+  Future<bool> deleteReminder(String medicationId, {String? elderlyId}) async {
     final token = _ref.read(authProvider).token;
     if (token == null) return false;
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
-      await _service.deleteCareConnection(token, connectionId);
-      await fetchReminders(); // Refresh status and connection list
+      await _service.deleteMedication(token: token, medicationId: medicationId);
+      await fetchReminders(elderlyId: elderlyId); 
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -128,17 +116,35 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     }
   }
 
-  Future<bool> confirmMedication(String medicationId) async {
+  Future<bool> deleteCareConnection(String connectionId) async {
     final token = _ref.read(authProvider).token;
     if (token == null) return false;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.deleteCareConnection(token, connectionId);
+      await fetchReminders(); 
+      return true;
+    } catch (e) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: e.toString().replaceFirst('Exception: ', ''),
+      );
+      return false;
+    }
+  }
 
+  // FIX: Accept elderlyId to ensure caregiver/family state refreshes properly
+  Future<bool> confirmMedication(String medicationId, {String? elderlyId}) async {
+    final token = _ref.read(authProvider).token;
+    if (token == null) return false;
     try {
       await _service.confirmMedication(
         token: token,
         medicationId: medicationId,
         status: 'Taken',
+        elderlyId: elderlyId,
       );
-      await fetchReminders();
+      await fetchReminders(elderlyId: elderlyId);
       return true;
     } catch (e) {
       state = state.copyWith(
@@ -151,7 +157,6 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
   Future<bool> logMood(String mood) async {
     final token = _ref.read(authProvider).token;
     if (token == null) return false;
-
     try {
       await _service.logMood(token: token, mood: mood);
       return true;
@@ -166,7 +171,6 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
   Future<void> triggerSOS() async {
     final token = _ref.read(authProvider).token;
     if (token == null) return;
-
     state = state.copyWith(isSosActive: true);
     try {
       await _service.triggerSos(token: token);
@@ -182,11 +186,9 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     state = state.copyWith(isSosActive: false);
   }
 
-  // Generate Invitation Code for Caregivers or Family
   Future<String?> generatePairingCode(String roleTarget) async {
     final token = _ref.read(authProvider).token;
     if (token == null) return null;
-
     try {
       final res = await _service.generatePairingCode(
         token: token,

@@ -1,10 +1,43 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:intl/intl.dart';
 import '../../../core/models/enums.dart';
 import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
+import '../../caregiver/providers/caregiver_provider.dart';
+import '../../family/providers/family_provider.dart';
+import '../../family/views/family_pairing_view.dart';
+import '../../caregiver/views/pairing_view.dart';
+import '../../caregiver/widgets/patient_selector_bar.dart';
 import '../providers/elderly_provider.dart';
+
+// Helper to Format DateTime Consistently
+String _formatReminderDateTime(String dateStr, String timeStr) {
+  try {
+    DateTime parsedDate;
+    if (dateStr == 'Today' || dateStr.isEmpty) {
+      parsedDate = DateTime.now();
+    } else {
+      parsedDate = DateFormat('yyyy-MM-dd').parse(dateStr);
+    }
+
+    DateTime parsedTime;
+    try {
+      parsedTime = DateFormat('HH:mm:ss').parse(timeStr);
+    } catch (_) {
+      parsedTime = DateFormat('hh:mm a').parse(timeStr);
+    }
+
+    final combined = DateTime(
+      parsedDate.year, parsedDate.month, parsedDate.day,
+      parsedTime.hour, parsedTime.minute,
+    );
+
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(combined);
+  } catch (e) {
+    return '$dateStr - $timeStr';
+  }
+}
 
 class RemindersView extends ConsumerStatefulWidget {
   const RemindersView({super.key});
@@ -19,22 +52,38 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() => ref.read(elderlyProvider.notifier).fetchReminders());
+    Future.microtask(() {
+      final authUser = ref.read(authProvider).user;
+      final isFamily = authUser?.role.toLowerCase() == 'family';
+      final isCaregiver = authUser?.role.toLowerCase() == 'caregiver';
+      
+      final activeId = isFamily 
+          ? ref.read(familyDashboardProvider).selectedElderlyId 
+          : (isCaregiver ? ref.read(caregiverProvider).activeElderlyId : authUser?.id ?? '');
+      
+      ref.read(elderlyProvider.notifier).fetchReminders(elderlyId: activeId);
+    });
   }
 
-  void _showAddReminderModal() {
+  void _showAddReminderModal(String activeElderlyId) {
+    if (activeElderlyId.isEmpty) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please select a senior patient first.')),
+      );
+      return;
+    }
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
-      builder: (context) => const _AddReminderModal(),
+      builder: (context) => _AddReminderModal(patientId: activeElderlyId),
     );
   }
 
   void _triggerPushAlert(Reminder rem) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
-        content: Text('⚡ Instant push alert sent to Senior: "${rem.title}" at ${rem.time}'),
+        content: Text('🔔 Instant push alert sent to Senior: "${rem.title}" at ${rem.time}'),
         backgroundColor: const Color(0xFF2563EB),
         duration: const Duration(seconds: 3),
       ),
@@ -43,6 +92,21 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
 
   @override
   Widget build(BuildContext context) {
+    final authUser = ref.watch(authProvider).user;
+    final isFamily = authUser?.role.toLowerCase() == 'family';
+    final isCaregiver = authUser?.role.toLowerCase() == 'caregiver';
+
+    final familyState = ref.watch(familyDashboardProvider);
+    final caregiverState = ref.watch(caregiverProvider);
+
+    final activeElderlyId = isFamily 
+        ? familyState.selectedElderlyId 
+        : (isCaregiver ? caregiverState.activeElderlyId : authUser?.id ?? '');
+    
+    final assignedSeniors = isFamily 
+        ? familyState.linkedSeniors 
+        : (isCaregiver ? caregiverState.assignedSeniors : <Map<String, String>>[]);
+
     final elderlyState = ref.watch(elderlyProvider);
     final elderlyNotifier = ref.read(elderlyProvider.notifier);
 
@@ -53,6 +117,25 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
+        if (!isFamily && !isCaregiver) const SizedBox.shrink() else 
+          PatientSelectorBar(
+            assignedSeniors: assignedSeniors,
+            selectedElderlyId: activeElderlyId,
+            onElderlySelected: (newElderlyId) {
+              if (isFamily) {
+                ref.read(familyDashboardProvider.notifier).switchElderlyContext(newElderlyId);
+              } else {
+                ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
+              }
+              ref.read(elderlyProvider.notifier).fetchReminders(elderlyId: newElderlyId);
+            },
+            onPairNewElderly: () {
+              Navigator.of(context).push(
+                MaterialPageRoute(builder: (context) => isFamily ? const FamilyPairingView() : const PairingView()),
+              );
+            },
+          ),
+        
         // Header
         Container(
           padding: const EdgeInsets.all(20),
@@ -81,21 +164,22 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                   ),
                 ],
               ),
-              ElevatedButton.icon(
-                onPressed: _showAddReminderModal,
-                icon: const Icon(Icons.add, size: 18),
-                label: const Text('NEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
-                  padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+              if (!isFamily) // Only Caregivers can add reminders
+                ElevatedButton.icon(
+                  onPressed: () => _showAddReminderModal(activeElderlyId),
+                  icon: const Icon(Icons.add, size: 18),
+                  label: const Text('NEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF2563EB),
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                    shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                  ),
                 ),
-              ),
             ],
           ),
         ),
         const SizedBox(height: 16),
-
         // Category Filter Pills
         SingleChildScrollView(
           scrollDirection: Axis.horizontal,
@@ -105,14 +189,13 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
               const SizedBox(width: 8),
               _buildCategoryPill('💊 Medications', ReminderCategory.medication),
               const SizedBox(width: 8),
-              _buildCategoryPill('📅 Appointments', ReminderCategory.appointment),
+              _buildCategoryPill('🩺 Appointments', ReminderCategory.appointment),
               const SizedBox(width: 8),
-              _buildCategoryPill('🏃 Activities', ReminderCategory.careActivity),
+              _buildCategoryPill('🧘 Activities', ReminderCategory.careActivity),
             ],
           ),
         ),
         const SizedBox(height: 16),
-
         // List of Reminders
         if (elderlyState.isLoading)
           const Padding(
@@ -140,7 +223,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
             separatorBuilder: (_, __) => const SizedBox(height: 14),
             itemBuilder: (context, index) {
               final rem = filteredReminders[index];
-              return _buildReminderItem(rem, elderlyNotifier);
+              return _buildReminderItem(rem, elderlyNotifier, !isFamily, activeElderlyId);
             },
           ),
       ],
@@ -170,130 +253,95 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
     );
   }
 
-  Widget _buildReminderItem(Reminder rem, ElderlyNotifier notifier) {
+  Widget _buildReminderItem(Reminder rem, ElderlyNotifier notifier, bool canEdit, String activeElderlyId) {
+    final formattedDateTime = _formatReminderDateTime(rem.date, rem.time);
+
     return Container(
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: rem.isCompleted ? const Color(0xFFF8FAFC) : Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(color: rem.isCompleted ? const Color(0xFFF1F5F9) : const Color(0xFFE2E8F0)),
-        boxShadow: rem.isCompleted
-            ? null
-            : [
-                const BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4)),
-              ],
+        boxShadow: rem.isCompleted ? null : [const BoxShadow(color: Color(0x08000000), blurRadius: 10, offset: Offset(0, 4))],
       ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
+      child: Stack(
         children: [
-          Row(
+          Column(
+            crossAxisAlignment: CrossAxisAlignment.start,
             children: [
-              Checkbox(
-                value: rem.isCompleted,
-                onChanged: (_) => notifier.confirmMedication(rem.id),
-                activeColor: const Color(0xFF10B981),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(6)),
+              Text(
+                rem.category.name.toLowerCase(),
+                style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold),
               ),
-              const SizedBox(width: 4),
-              Expanded(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Row(
-                      children: [
-                        Container(
-                          padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
-                          decoration: BoxDecoration(
-                            color: _getCategoryColor(rem.category).withOpacity(0.12),
-                            borderRadius: BorderRadius.circular(10),
-                          ),
-                          child: Text(
-                            '${rem.category.emoji} ${rem.category.label}',
-                            style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: _getCategoryColor(rem.category)),
-                          ),
-                        ),
-                        const SizedBox(width: 8),
-                        Text(
-                          '${rem.time} • ${rem.frequency.label}',
-                          style: const TextStyle(fontSize: 11, fontWeight: FontWeight.bold, color: Color(0xFF64748B)),
-                        ),
-                      ],
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      rem.title,
-                      style: TextStyle(
-                        fontSize: 16,
-                        fontWeight: FontWeight.w900,
-                        color: rem.isCompleted ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
-                        decoration: rem.isCompleted ? TextDecoration.lineThrough : null,
-                      ),
-                    ),
-                  ],
+              const SizedBox(height: 4),
+              Text(
+                '🗓️ $formattedDateTime',
+                style: const TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w900),
+              ),
+              const SizedBox(height: 4),
+              Text(
+                rem.title,
+                style: TextStyle(
+                  fontSize: 16, 
+                  fontWeight: FontWeight.bold, 
+                  color: rem.isCompleted ? const Color(0xFF94A3B8) : const Color(0xFF0F172A), 
+                  decoration: rem.isCompleted ? TextDecoration.lineThrough : null
                 ),
               ),
-            ],
-          ),
-
-          if (rem.dosageOrLocation != null) ...[
-            const SizedBox(height: 6),
-            Padding(
-              padding: const EdgeInsets.only(left: 48),
-              child: Text(
-                '📍 ${rem.dosageOrLocation}',
-                style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Color(0xFF334155)),
-              ),
-            ),
-          ],
-
-          if (rem.notes != null) ...[
-            const SizedBox(height: 4),
-            Padding(
-              padding: const EdgeInsets.only(left: 48),
-              child: Text(
-                '💡 ${rem.notes}',
-                style: const TextStyle(fontSize: 11, color: Color(0xFF64748B)),
-              ),
-            ),
-          ],
-
-          const SizedBox(height: 12),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Padding(
-                padding: const EdgeInsets.only(left: 48),
-                child: Text(
-                  'Created by ${rem.createdBy ?? "Caregiver"}',
-                  style: const TextStyle(fontSize: 10, fontWeight: FontWeight.bold, color: Color(0xFF94A3B8)),
+              if (rem.dosageOrLocation != null && rem.dosageOrLocation!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text(rem.dosageOrLocation!, style: const TextStyle(fontSize: 14, color: Color(0xFF334155))),
+              ],
+              if (rem.notes != null && rem.notes!.isNotEmpty) ...[
+                const SizedBox(height: 4),
+                Text('Note: ${rem.notes}', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontStyle: FontStyle.italic)),
+              ],
+              const SizedBox(height: 8),
+              Text('Added by: ${rem.createdBy ?? "Unknown"}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+              Text('Freq: ${rem.frequency.name}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+              
+              if (canEdit) ...[
+                const SizedBox(height: 12),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: () => notifier.confirmMedication(rem.id, elderlyId: activeElderlyId),
+                    icon: Icon(rem.isCompleted ? Icons.refresh : Icons.check, size: 20),
+                    label: Text(
+                      rem.isCompleted ? 'DONE AT ${rem.completedAt ?? ""} (Tap to Reset)' : 'MARK AS DONE',
+                      style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: rem.isCompleted ? const Color(0xFFCBD5E1) : const Color(0xFF10B981),
+                      foregroundColor: rem.isCompleted ? const Color(0xFF334155) : Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 14),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                    ),
+                  ),
                 ),
-              ),
-              TextButton.icon(
-                onPressed: () => _triggerPushAlert(rem),
-                icon: const Icon(Icons.notifications_active_outlined, size: 14),
-                label: const Text('Push Alert', style: TextStyle(fontSize: 11, fontWeight: FontWeight.bold)),
-              ),
+              ]
             ],
           ),
+          if (canEdit)
+            Positioned(
+              top: -10,
+              right: -10,
+              child: IconButton(
+                icon: const Icon(Icons.delete_outline, color: Color(0xFFEF4444)),
+                onPressed: () {
+                  notifier.deleteReminder(rem.id, elderlyId: activeElderlyId);
+                },
+              ),
+            ),
         ],
       ),
     );
   }
-
-  Color _getCategoryColor(ReminderCategory cat) {
-    switch (cat) {
-      case ReminderCategory.medication:
-        return const Color(0xFFEF4444);
-      case ReminderCategory.appointment:
-        return const Color(0xFF2563EB);
-      case ReminderCategory.careActivity:
-        return const Color(0xFF10B981);
-    }
-  }
 }
 
 class _AddReminderModal extends ConsumerStatefulWidget {
-  const _AddReminderModal();
+  final String patientId;
+  const _AddReminderModal({required this.patientId});
 
   @override
   ConsumerState<_AddReminderModal> createState() => _AddReminderModalState();
@@ -301,9 +349,13 @@ class _AddReminderModal extends ConsumerStatefulWidget {
 
 class _AddReminderModalState extends ConsumerState<_AddReminderModal> {
   final _titleController = TextEditingController();
-  final _timeController = TextEditingController(text: '09:00 AM');
   final _dosageController = TextEditingController();
   final _notesController = TextEditingController();
+  
+  DateTime? _selectedDate;
+  String _sqlDateFormat = '';
+  TimeOfDay? _selectedTime;
+  String _sqlTimeFormat = '09:00:00'; 
 
   ReminderCategory _category = ReminderCategory.medication;
   ReminderFrequency _frequency = ReminderFrequency.daily;
@@ -311,25 +363,63 @@ class _AddReminderModalState extends ConsumerState<_AddReminderModal> {
   @override
   void dispose() {
     _titleController.dispose();
-    _timeController.dispose();
     _dosageController.dispose();
     _notesController.dispose();
     super.dispose();
   }
 
+  Future<void> _pickDate() async {
+    final picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime.now().add(const Duration(days: 365)),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedDate = picked;
+        _sqlDateFormat = DateFormat('yyyy-MM-dd').format(picked);
+      });
+    }
+  }
+
+  Future<void> _pickTime() async {
+    final picked = await showTimePicker(
+      context: context,
+      initialTime: TimeOfDay.now(),
+    );
+    if (picked != null) {
+      setState(() {
+        _selectedTime = picked;
+        _sqlTimeFormat = '${picked.hour.toString().padLeft(2, '0')}:${picked.minute.toString().padLeft(2, '0')}:00';
+      });
+    }
+  }
+
   Future<void> _submit() async {
     final title = _titleController.text.trim();
-    if (title.isEmpty) {
+    if (title.isEmpty || _selectedTime == null || _selectedDate == null) {
       ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(content: Text('Please enter a reminder title.')),
+        const SnackBar(content: Text('Please enter title, select a date, and a time.')),
       );
       return;
     }
 
-    final success = await ref.read(elderlyProvider.notifier).confirmMedication(title);
+    final success = await ref.read(caregiverProvider.notifier).scheduleMedication(
+      patientId: widget.patientId,
+      medicationName: title,
+      scheduledDate: _sqlDateFormat,
+      scheduledTime: _sqlTimeFormat,
+      dosage: _dosageController.text.trim(),
+      category: _category.name,
+      frequency: _frequency.name,
+      notes: _notesController.text.trim()
+    );
 
-    if (mounted) {
+    if (success && mounted) {
       Navigator.pop(context);
+      ref.read(elderlyProvider.notifier).fetchReminders(elderlyId: widget.patientId);
+
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('New care reminder created & synchronized!'),
@@ -375,31 +465,41 @@ class _AddReminderModalState extends ConsumerState<_AddReminderModal> {
               controller: _titleController,
               decoration: const InputDecoration(
                 labelText: 'Reminder Title',
-                hintText: 'e.g. Take Blood Pressure Pill',
+                hintText: 'e.g. Morning Blood Pressure Medication',
               ),
+            ),
+            const SizedBox(height: 14),
+            DropdownButtonFormField<ReminderCategory>(
+              value: _category,
+              items: ReminderCategory.values.map((cat) {
+                return DropdownMenuItem(value: cat, child: Text('${cat.emoji} ${cat.label}'));
+              }).toList(),
+              onChanged: (val) {
+                if (val != null) setState(() => _category = val);
+              },
+              decoration: const InputDecoration(labelText: 'Category'),
             ),
             const SizedBox(height: 14),
             Row(
               children: [
                 Expanded(
-                  child: DropdownButtonFormField<ReminderCategory>(
-                    value: _category,
-                    items: ReminderCategory.values.map((cat) {
-                      return DropdownMenuItem(value: cat, child: Text('${cat.emoji} ${cat.label}'));
-                    }).toList(),
-                    onChanged: (val) {
-                      if (val != null) setState(() => _category = val);
-                    },
-                    decoration: const InputDecoration(labelText: 'Category'),
+                  child: OutlinedButton.icon(
+                    onPressed: _pickDate,
+                    icon: const Icon(Icons.calendar_today, size: 16),
+                    label: Text(_selectedDate == null ? 'Set Date' : DateFormat('MMM dd, yyyy').format(_selectedDate!)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
+                    ),
                   ),
                 ),
                 const SizedBox(width: 12),
                 Expanded(
-                  child: TextField(
-                    controller: _timeController,
-                    decoration: const InputDecoration(
-                      labelText: 'Time',
-                      hintText: '09:00 AM',
+                  child: OutlinedButton.icon(
+                    onPressed: _pickTime,
+                    icon: const Icon(Icons.access_time, size: 16),
+                    label: Text(_selectedTime == null ? 'Set Time' : _selectedTime!.format(context)),
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 20),
                     ),
                   ),
                 ),
@@ -420,8 +520,8 @@ class _AddReminderModalState extends ConsumerState<_AddReminderModal> {
             TextField(
               controller: _dosageController,
               decoration: const InputDecoration(
-                labelText: 'Dosage or Location (Optional)',
-                hintText: 'e.g. 1 Tablet with warm water',
+                labelText: 'Dosage or Location',
+                hintText: 'e.g. 1 Tablet (Amlodipine 5mg) with warm water',
               ),
             ),
             const SizedBox(height: 14),
@@ -439,6 +539,7 @@ class _AddReminderModalState extends ConsumerState<_AddReminderModal> {
                 onPressed: _submit,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: const Color(0xFF2563EB),
+                  foregroundColor: Colors.white,
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),

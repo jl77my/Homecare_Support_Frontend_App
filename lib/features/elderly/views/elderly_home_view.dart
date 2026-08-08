@@ -1,11 +1,39 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:intl/intl.dart';
 import '../../../core/models/enums.dart';
 import '../../../core/models/models.dart';
+import '../../auth/providers/auth_provider.dart';
 import '../../caregiver/views/profile_view.dart';
 import '../providers/elderly_provider.dart';
 import '../widgets/pairing_code_modal.dart';
+
+String _formatReminderDateTime(String dateStr, String timeStr) {
+  try {
+    DateTime parsedDate;
+    if (dateStr == 'Today' || dateStr.isEmpty) {
+      parsedDate = DateTime.now();
+    } else {
+      parsedDate = DateFormat('yyyy-MM-dd').parse(dateStr);
+    }
+
+    DateTime parsedTime;
+    try {
+      parsedTime = DateFormat('HH:mm:ss').parse(timeStr);
+    } catch (_) {
+      parsedTime = DateFormat('hh:mm a').parse(timeStr);
+    }
+
+    final combined = DateTime(
+      parsedDate.year, parsedDate.month, parsedDate.day,
+      parsedTime.hour, parsedTime.minute,
+    );
+
+    return DateFormat('MMM dd, yyyy - hh:mm a').format(combined);
+  } catch (e) {
+    return '$dateStr - $timeStr';
+  }
+}
 
 class ElderlyView extends ConsumerStatefulWidget {
   const ElderlyView({super.key});
@@ -51,8 +79,9 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
   Widget build(BuildContext context) {
     final state = ref.watch(elderlyProvider);
     final notifier = ref.read(elderlyProvider.notifier);
+    final authUser = ref.watch(authProvider).user;
+    final activeElderlyId = authUser?.id ?? '';
 
-    // Filter reminders safely based on selected category
     final reminders = _selectedCategoryFilter == null
         ? state.reminders
         : state.reminders.where((r) => r.category == _selectedCategoryFilter).toList();
@@ -67,7 +96,6 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
         backgroundColor: Colors.white,
         elevation: 0,
         actions: [
-          // Profile Navigation Icon on Top Right
           IconButton(
             icon: const Icon(Icons.account_circle, size: 30, color: Color(0xFF2563EB)),
             tooltip: 'View Profile',
@@ -84,11 +112,10 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
           ? const Center(child: CircularProgressIndicator())
           : state.isLinked == false
               ? _buildUnlinkedOnboardingView(context)
-              : _buildActiveDashboardView(state, notifier, reminders),
+              : _buildActiveDashboardView(state, notifier, reminders, activeElderlyId),
     );
   }
 
-  // 1. Unlinked State: Displays ONLY Invitation Code Generator Card
   Widget _buildUnlinkedOnboardingView(BuildContext context) {
     return ListView(
       padding: const EdgeInsets.all(24),
@@ -152,8 +179,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
     );
   }
 
-  // 2. Linked State: Renders Full Active Home Dashboard
-  Widget _buildActiveDashboardView(ElderlyState state, ElderlyNotifier notifier, List<Reminder> reminders) {
+  Widget _buildActiveDashboardView(ElderlyState state, ElderlyNotifier notifier, List<Reminder> reminders, String activeElderlyId) {
     return ListView(
       padding: const EdgeInsets.all(16).copyWith(bottom: 32),
       children: [
@@ -233,7 +259,6 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
           ),
         ),
         const SizedBox(height: 24),
-
         // Reminders Section for Senior
         Container(
           padding: const EdgeInsets.all(20),
@@ -304,8 +329,6 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                 ],
               ),
               const SizedBox(height: 16),
-
-              // Category Filters
               SingleChildScrollView(
                 scrollDirection: Axis.horizontal,
                 child: Row(
@@ -314,14 +337,13 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                     const SizedBox(width: 8),
                     _buildFilterChip('💊 Pills', ReminderCategory.medication),
                     const SizedBox(width: 8),
-                    _buildFilterChip('📅 Doctors', ReminderCategory.appointment),
+                    _buildFilterChip('🩺 Doctors', ReminderCategory.appointment),
                     const SizedBox(width: 8),
-                    _buildFilterChip('🏃 Activities', ReminderCategory.careActivity),
+                    _buildFilterChip('🧘 Activities', ReminderCategory.careActivity),
                   ],
                 ),
               ),
               const SizedBox(height: 16),
-
               if (reminders.isEmpty)
                 const Padding(
                   padding: EdgeInsets.symmetric(vertical: 32),
@@ -346,14 +368,13 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                   separatorBuilder: (_, __) => const SizedBox(height: 14),
                   itemBuilder: (context, index) {
                     final rem = reminders[index];
-                    return _buildReminderCard(rem, notifier);
+                    return _buildReminderCard(rem, notifier, activeElderlyId);
                   },
                 ),
             ],
           ),
         ),
         const SizedBox(height: 24),
-
         // Mood / Feeling Logger
         Container(
           padding: const EdgeInsets.all(20),
@@ -384,7 +405,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                 children: [
                   Expanded(
                     child: _buildFeelingButton(
-                      emoji: '😊',
+                      emoji: '😁',
                       label: 'FEEL GREAT',
                       moodValue: 'Happy',
                       bgColor: const Color(0xFFF0FDF4),
@@ -406,7 +427,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                   const SizedBox(width: 10),
                   Expanded(
                     child: _buildFeelingButton(
-                      emoji: '😴',
+                      emoji: '😔',
                       label: 'TIRED',
                       moodValue: 'Sad',
                       bgColor: const Color(0xFFFEF2F2),
@@ -444,13 +465,15 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
     );
   }
 
-  Widget _buildReminderCard(Reminder rem, ElderlyNotifier notifier) {
+  Widget _buildReminderCard(Reminder rem, ElderlyNotifier notifier, String activeElderlyId) {
+    final formattedDateTime = _formatReminderDateTime(rem.date, rem.time);
+
     return AnimatedContainer(
       duration: const Duration(milliseconds: 200),
       padding: const EdgeInsets.all(18),
       decoration: BoxDecoration(
         color: rem.isCompleted ? const Color(0xFFF8FAFC) : Colors.white,
-        borderRadius: BorderRadius.circular(28),
+        borderRadius: BorderRadius.circular(20),
         border: Border.all(
           color: rem.isCompleted ? const Color(0xFFE2E8F0) : const Color(0xFF60A5FA),
           width: rem.isCompleted ? 1.5 : 2.5,
@@ -459,86 +482,77 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: _getCategoryColor(rem.category).withOpacity(0.15),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: _getCategoryColor(rem.category).withOpacity(0.3)),
-                ),
-                child: Text(
-                  '${rem.category.emoji} ${rem.category.label.toUpperCase()}',
-                  style: TextStyle(
-                    fontSize: 10,
-                    fontWeight: FontWeight.w900,
-                    color: _getCategoryColor(rem.category),
-                  ),
-                ),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFFF1F5F9),
-                  borderRadius: BorderRadius.circular(12),
-                ),
-                child: Row(
-                  children: [
-                    const Icon(Icons.access_time, size: 14, color: Color(0xFF2563EB)),
-                    const SizedBox(width: 4),
-                    Text(
-                      rem.time,
-                      style: const TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                    ),
-                  ],
-                ),
-              ),
-            ],
+          Text(
+            rem.category.name.toLowerCase(),
+            style: const TextStyle(color: Color(0xFF64748B), fontSize: 12, fontWeight: FontWeight.bold),
           ),
-          const SizedBox(height: 10),
+          const SizedBox(height: 4),
+          Text(
+            '🗓️ $formattedDateTime',
+            style: const TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w900),
+          ),
+          const SizedBox(height: 4),
           Text(
             rem.title,
             style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.w900,
-              color: rem.isCompleted ? const Color(0xFF94A3B8) : const Color(0xFF0F172A),
-              decoration: rem.isCompleted ? TextDecoration.lineThrough : null,
+              fontSize: 16, 
+              fontWeight: FontWeight.bold, 
+              color: rem.isCompleted ? const Color(0xFF94A3B8) : const Color(0xFF0F172A), 
+              decoration: rem.isCompleted ? TextDecoration.lineThrough : null
             ),
           ),
-          const SizedBox(height: 14),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: () => notifier.confirmMedication(rem.id),
-              icon: Icon(rem.isCompleted ? Icons.check_circle : Icons.check, size: 24),
-              label: Text(
-                rem.isCompleted ? 'DONE AT ${rem.completedAt ?? "TODAY"}' : 'MARK COMPLETED NOW',
-                style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+          if (rem.dosageOrLocation != null && rem.dosageOrLocation!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text(rem.dosageOrLocation!, style: const TextStyle(fontSize: 14, color: Color(0xFF334155))),
+          ],
+          if (rem.notes != null && rem.notes!.isNotEmpty) ...[
+            const SizedBox(height: 4),
+            Text('Note: ${rem.notes}', style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontStyle: FontStyle.italic)),
+          ],
+          const SizedBox(height: 8),
+          Text('Added by: ${rem.createdBy ?? "Unknown"}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+          Text('Freq: ${rem.frequency.name}', style: const TextStyle(fontSize: 12, color: Color(0xFF94A3B8))),
+          const SizedBox(height: 12),
+          
+          if (!rem.isCompleted)
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: () => notifier.confirmMedication(rem.id, elderlyId: activeElderlyId),
+                icon: const Icon(Icons.check, size: 24),
+                label: const Text(
+                  'MARK COMPLETED NOW',
+                  style: TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF22C55E),
+                  foregroundColor: Colors.white,
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
               ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: rem.isCompleted ? const Color(0xFFCBD5E1) : const Color(0xFF22C55E),
-                foregroundColor: rem.isCompleted ? const Color(0xFF334155) : Colors.white,
-                padding: const EdgeInsets.symmetric(vertical: 14),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+            )
+          else
+             SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: null,
+                icon: const Icon(Icons.check_circle, size: 24),
+                label: Text(
+                  'DONE AT ${rem.completedAt ?? "TODAY"}',
+                  style: const TextStyle(fontSize: 14, fontWeight: FontWeight.w900),
+                ),
+                style: ElevatedButton.styleFrom(
+                  disabledBackgroundColor: const Color(0xFFCBD5E1),
+                  disabledForegroundColor: const Color(0xFF334155),
+                  padding: const EdgeInsets.symmetric(vertical: 14),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(18)),
+                ),
               ),
             ),
-          ),
         ],
       ),
     );
-  }
-
-  Color _getCategoryColor(ReminderCategory cat) {
-    switch (cat) {
-      case ReminderCategory.medication:
-        return const Color(0xFFEF4444);
-      case ReminderCategory.appointment:
-        return const Color(0xFF2563EB);
-      case ReminderCategory.careActivity:
-        return const Color(0xFF10B981);
-    }
   }
 
   Widget _buildFeelingButton({

@@ -1,7 +1,5 @@
-// lib/features/caregiver/views/caregiver_status_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
 import '../../../core/models/models.dart';
 import '../providers/caregiver_provider.dart';
 import '../widgets/patient_selector_bar.dart';
@@ -10,13 +8,11 @@ import 'pairing_view.dart';
 class CaregiverStatusView extends ConsumerStatefulWidget {
   final VoidCallback onNavigateToReports;
   final String elderlyId;
-
   const CaregiverStatusView({
     super.key,
     required this.onNavigateToReports,
     this.elderlyId = "00000000-0000-0000-0000-000000000000",
   });
-
   @override
   ConsumerState<CaregiverStatusView> createState() => _CaregiverStatusViewState();
 }
@@ -29,7 +25,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
   @override
   void initState() {
     super.initState();
-    // Fetch assigned seniors list on view initialization
     Future.microtask(() => ref.read(caregiverProvider.notifier).fetchAssignedSeniors());
   }
 
@@ -45,16 +40,16 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
     final hrStr = _heartRateController.text.trim();
     final bp = _bpController.text.trim();
     final glucoseStr = _glucoseController.text.trim();
-
     if (hrStr.isEmpty || bp.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(content: Text('Please enter Heart Rate and Blood Pressure.')),
       );
       return;
     }
-
+    
+    final activeId = ref.read(caregiverProvider).activeElderlyId;
     final success = await ref.read(caregiverProvider.notifier).recordHealth(
-          patientId: widget.elderlyId, // Refers to selected active senior
+          patientId: activeId.isEmpty ? widget.elderlyId : activeId, 
           heartRate: hrStr,
           bloodPressure: bp,
           bloodSugar: glucoseStr.isEmpty ? '120' : glucoseStr,
@@ -65,7 +60,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
       _heartRateController.clear();
       _bpController.clear();
       _glucoseController.clear();
-
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
           content: Text('Vitals logged successfully & synchronized with family!'),
@@ -84,7 +78,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
   Widget build(BuildContext context) {
     final caregiverState = ref.watch(caregiverProvider);
     final assignedSeniors = caregiverState.assignedSeniors;
-
     final latest = caregiverState.vitals.isNotEmpty
         ? caregiverState.vitals.first
         : HealthVitals(
@@ -100,7 +93,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
       return const Center(child: CircularProgressIndicator());
     }
 
-    // 1. Unlinked State: Shows ONLY Onboarding Linking Card for new caregivers
     if (assignedSeniors.isEmpty) {
       return ListView(
         padding: const EdgeInsets.symmetric(vertical: 24, horizontal: 8),
@@ -169,14 +161,13 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
       );
     }
 
-    // 2. Linked State: Full Active Dashboard
     return ListView(
       padding: const EdgeInsets.only(bottom: 32),
       children: [
-        // Patient Selector Bar Header Component
         PatientSelectorBar(
-          assignedSeniors: assignedSeniors, // List<Map<String, String>>
-          selectedElderlyId: widget.elderlyId,
+          assignedSeniors: assignedSeniors, 
+          // FIX: Uses Riverpod state directly instead of widget parameter
+          selectedElderlyId: caregiverState.activeElderlyId,
           onElderlySelected: (newElderlyId) {
             ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
           },
@@ -186,7 +177,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
             );
           },
         ),
-
         // Active Monitoring Card
         Container(
           padding: const EdgeInsets.all(20),
@@ -306,7 +296,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
           ),
         ),
         const SizedBox(height: 20),
-
         // Log New Vitals Form
         Container(
           padding: const EdgeInsets.all(24),
@@ -383,7 +372,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
           ),
         ),
         const SizedBox(height: 20),
-
         // Care Reports Shortcut Card
         Container(
           padding: const EdgeInsets.all(20),
