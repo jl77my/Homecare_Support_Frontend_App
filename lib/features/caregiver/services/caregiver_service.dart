@@ -50,6 +50,7 @@ class CaregiverService {
   }
 
   // 3. Assign Care Task
+  // Fix the Create Task URL to include the patientId
   Future<Map<String, dynamic>> createTask({
     required String token,
     required String title,
@@ -58,16 +59,41 @@ class CaregiverService {
     required String assignedTo,
   }) async {
     final response = await _client.post(
-      Uri.parse('$_baseUrl/caregiver/tasks'),
+      Uri.parse('$_baseUrl/caregiver/tasks/$assignedTo'), // Ensure this matches backend route
       headers: _headers(token),
       body: jsonEncode({
         'title': title,
         'description': description,
         'dueDate': dueDate,
-        'assignedTo': assignedTo,
       }),
     );
     return _parseResponse(response);
+  }
+
+  // Add the Update Task Status method
+  Future<Map<String, dynamic>> updateTaskStatus({
+    required String token,
+    required String taskId,
+    required String status,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$_baseUrl/caregiver/tasks/$taskId/status'),
+      headers: _headers(token),
+      body: jsonEncode({'status': status}),
+    );
+    return _parseResponse(response);
+  }
+
+  Future<List<dynamic>> getCareTasks({
+    required String token,
+    required String patientId,
+  }) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/caregiver/tasks/$patientId'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    return data['tasks'] as List<dynamic>? ?? [];
   }
 
   // 4. Schedule Medication
@@ -197,3 +223,4 @@ class CaregiverService {
     throw Exception(message);
   }
 }
+

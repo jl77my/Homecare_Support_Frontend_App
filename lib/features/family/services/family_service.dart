@@ -63,6 +63,19 @@ class FamilyService {
     return data['tasks'] as List<dynamic>? ?? [];
   }
 
+  Future<Map<String, dynamic>> updateTaskStatus({
+    required String token,
+    required String taskId,
+    required String status,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$_baseUrl/family/tasks/$taskId/status'),
+      headers: _headers(token),
+      body: jsonEncode({'status': status}),
+    );
+    return _parseResponse(response);
+  }
+
   // 4. View Health Vitals and Rule-Based Alerts
   Future<List<dynamic>> getHealthRecords(String token, String patientId) async {
     final response = await _client.get(
@@ -142,6 +155,26 @@ class FamilyService {
       headers: _headers(token),
     );
     _parseResponse(response);
+  }
+
+  // 11. Create Care Task for specific elderly (Moved inside FamilyService class)
+  Future<Map<String, dynamic>> createTask({
+    required String token,
+    required String elderlyId,
+    required String title,
+    required String description,
+    required String dueDate,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/family/tasks/$elderlyId'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'title': title,
+        'description': description,
+        'dueDate': dueDate,
+      }),
+    );
+    return _parseResponse(response);
   }
 
   Map<String, dynamic> _parseResponse(http.Response response) {

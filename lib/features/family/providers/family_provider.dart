@@ -5,19 +5,21 @@ import '../services/family_service.dart';
 
 // 1. Immutable Family Dashboard State
 class FamilyDashboardState {
+  final List<CareTask> tasks; // ADDED TASKS LIST
   final HealthVitals? latestVital;
   final CareReport? latestReport;
   final ChatMessage? latestMessage;
-  final List<Map<String, String>> linkedSeniors; // Added for linked elderly list
-  final List<ChatMessage> currentChatMessages;   // Isolated channel thread messages
-  final List<dynamic> activeCaregivers;           // Care connections list
-  final List<dynamic> activeFamilyMembers;        // Care connections list
-  final String selectedElderlyId;                // Selected active senior context
+  final List<Map<String, String>> linkedSeniors;
+  final List<ChatMessage> currentChatMessages;
+  final List<dynamic> activeCaregivers;
+  final List<dynamic> activeFamilyMembers;
+  final String selectedElderlyId;
   final int totalReportsCount;
   final bool isLoading;
   final String? errorMessage;
 
   const FamilyDashboardState({
+    this.tasks = const [], // INITIALIZE TASKS
     this.latestVital,
     this.latestReport,
     this.latestMessage,
@@ -32,6 +34,7 @@ class FamilyDashboardState {
   });
 
   FamilyDashboardState copyWith({
+    List<CareTask>? tasks, // ADDED TASKS
     HealthVitals? latestVital,
     CareReport? latestReport,
     ChatMessage? latestMessage,
@@ -46,6 +49,7 @@ class FamilyDashboardState {
     bool clearError = false,
   }) {
     return FamilyDashboardState(
+      tasks: tasks ?? this.tasks, // ASSIGN TASKS
       latestVital: latestVital ?? this.latestVital,
       latestReport: latestReport ?? this.latestReport,
       latestMessage: latestMessage ?? this.latestMessage,
@@ -73,14 +77,12 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
 
   String? get _token => _ref.read(authProvider).token;
 
-  // Redeem Family Pairing Code (family_pairing_view.dart)
   Future<bool> linkFamilyByCode({
     required String code,
     required String relationship,
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.linkFamilyByCode(
@@ -88,7 +90,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
         code: code,
         relationship: relationship,
       );
-      await fetchLinkedSeniors(); // Refresh senior list after pairing
+      await fetchLinkedSeniors();
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -96,11 +98,9 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     }
   }
 
-  // Fetch List of Linked Seniors
   Future<void> fetchLinkedSeniors() async {
     final token = _token;
     if (token == null) return;
-
     try {
       final seniors = await _service.getLinkedElderly(token);
       String currentActive = state.selectedElderlyId;
@@ -119,17 +119,14 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     }
   }
 
-  // Switch Active Senior Context
   Future<void> switchElderlyContext(String elderlyId) async {
     state = state.copyWith(selectedElderlyId: elderlyId);
     await fetchDashboardData(elderlyId);
   }
 
-  // Fetch Care Connections for Selected Senior
   Future<void> fetchCareConnections(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-
     try {
       final data = await _service.getCareConnections(token, elderlyId);
       state = state.copyWith(
@@ -141,11 +138,46 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     }
   }
 
-  // Delete / Remove Care Connection (Enforcing Family Role Privileges)
-  Future<bool> deleteCareConnection(String connectionId) async {
+  // ADDED: Fetch Care Tasks for Family Member
+  Future<void> fetchCareTasks(String elderlyId) async {
+    final token = _token;
+    if (token == null) return;
+    try {
+      final rawTasks = await _service.getCareTasks(token, elderlyId);
+      final parsedTasks = rawTasks.map((json) => CareTask.fromJson(json)).toList();
+      state = state.copyWith(tasks: parsedTasks);
+    } catch (e) {
+      _handleException(e);
+    }
+  }
+
+  // ADDED: Update Task Status for Family Member
+  Future<bool> updateTaskStatus(String taskId, String status) async {
     final token = _token;
     if (token == null) return _handleAuthError();
 
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.updateTaskStatus(
+        token: token,
+        taskId: taskId,
+        status: status,
+      );
+      
+      if (state.selectedElderlyId.isNotEmpty) {
+        await fetchCareTasks(state.selectedElderlyId);
+      }
+      
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
+  Future<bool> deleteCareConnection(String connectionId) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.deleteCareConnection(token, connectionId);
@@ -159,17 +191,14 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     }
   }
 
-  // Fetch Dashboard Monitoring Data for Selected Senior
   Future<void> fetchDashboardData(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final reports = await _service.getCareReports(token, elderlyId);
       final healthRecords = await _service.getHealthRecords(token, elderlyId);
       final chatMsgs = await _service.getChatMessages(token: token, elderlyId: elderlyId);
-
       final latestReport = reports.isNotEmpty
           ? CareReport.fromJson(reports.first as Map<String, dynamic>)
           : null;
@@ -177,7 +206,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
           ? HealthVitals.fromJson(healthRecords.first as Map<String, dynamic>)
           : null;
       final latestMessage = chatMsgs.isNotEmpty ? chatMsgs.last : null;
-
+      
       state = state.copyWith(
         latestVital: latestVital,
         latestReport: latestReport,
@@ -186,18 +215,16 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
         totalReportsCount: reports.length,
         isLoading: false,
       );
-
       await fetchCareConnections(elderlyId);
+      await fetchCareTasks(elderlyId); // Sync tasks on dashboard load
     } catch (e) {
       _handleException(e);
     }
   }
 
-  // Fetch Isolated Chat Messages Thread
   Future<void> fetchChatMessages(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final messages = await _service.getChatMessages(
@@ -214,7 +241,6 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     }
   }
 
-  // Send Message to Isolated Family Channel
   Future<bool> sendChatMessage({
     required String elderlyId,
     required String messageText,
@@ -222,7 +248,6 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
   }) async {
     final token = _token;
     if (token == null) return _handleAuthError();
-
     try {
       await _service.sendMessage(
         token: token,
@@ -230,7 +255,34 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
         messageText: messageText,
         receiverId: receiverId,
       );
-      await fetchChatMessages(elderlyId); // Refresh thread immediately
+      await fetchChatMessages(elderlyId);
+      return true;
+    } catch (e) {
+      return _handleException(e);
+    }
+  }
+
+  Future<bool> createTask({
+    required String elderlyId,
+    required String title,
+    required String description,
+    required String dueDate,
+  }) async {
+    final token = _token;
+    if (token == null) return _handleAuthError();
+    
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _service.createTask(
+        token: token,
+        elderlyId: elderlyId,
+        title: title,
+        description: description,
+        dueDate: dueDate,
+      );
+      
+      await fetchCareTasks(elderlyId); // Automatically sync the list
+      state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
       return _handleException(e);
@@ -257,4 +309,4 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
 // 4. Global Family Riverpod Provider
 final familyDashboardProvider = StateNotifierProvider<FamilyDashboardNotifier, FamilyDashboardState>((ref) {
   return FamilyDashboardNotifier(ref.watch(familyServiceProvider), ref);
-}); 
+});

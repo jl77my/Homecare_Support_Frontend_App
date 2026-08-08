@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart'; // Required for Clipboard functionality
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/elderly_provider.dart';
 
@@ -47,6 +48,19 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
     }
   }
 
+  void _copyToClipboard() {
+    if (_generatedCode != null) {
+      Clipboard.setData(ClipboardData(text: _generatedCode!));
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invite code copied to clipboard!'),
+          backgroundColor: Color(0xFF10B981),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     return Container(
@@ -82,7 +96,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
             style: TextStyle(fontSize: 13, color: Color(0xFF64748B), height: 1.4),
           ),
           const SizedBox(height: 20),
-
+          
           // Role Target Selector Segment
           Row(
             children: [
@@ -95,7 +109,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                   selected: _selectedRole == 'caregiver',
                   onSelected: (_) => setState(() {
                     _selectedRole = 'caregiver';
-                    _generatedCode = null;
+                    _generatedCode = null; // Reset code when switching roles
                   }),
                   selectedColor: const Color(0xFF2563EB),
                   labelStyle: TextStyle(color: _selectedRole == 'caregiver' ? Colors.white : const Color(0xFF0F172A)),
@@ -111,7 +125,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                   selected: _selectedRole == 'family',
                   onSelected: (_) => setState(() {
                     _selectedRole = 'family';
-                    _generatedCode = null;
+                    _generatedCode = null; // Reset code when switching roles
                   }),
                   selectedColor: const Color(0xFF2563EB),
                   labelStyle: TextStyle(color: _selectedRole == 'family' ? Colors.white : const Color(0xFF0F172A)),
@@ -121,7 +135,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
           ),
           const SizedBox(height: 24),
 
-          // Display Generated Code
+          // Conditional UI: If code exists, show the code box AND the dual buttons
           if (_generatedCode != null) ...[
             Container(
               padding: const EdgeInsets.symmetric(vertical: 20, horizontal: 32),
@@ -155,27 +169,68 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
               ),
             ),
             const SizedBox(height: 20),
-          ],
-
-          // Generate Action Button
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton.icon(
-              onPressed: _isGenerating ? null : _handleGenerate,
-              icon: _isGenerating
-                  ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : const Icon(Icons.qr_code),
-              label: Text(
-                _generatedCode == null ? 'GENERATE CODE NOW' : 'GENERATE NEW CODE',
-                style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
-              ),
-              style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF0F172A),
-                padding: const EdgeInsets.symmetric(vertical: 16),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+            
+            // Dual Buttons: COPY CODE and GENERATE NEW CODE
+            Row(
+              children: [
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: _copyToClipboard,
+                    icon: const Icon(Icons.copy, size: 20),
+                    label: const Text(
+                      'COPY CODE',
+                      style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                    ),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF2563EB),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: OutlinedButton.icon(
+                    onPressed: _isGenerating ? null : _handleGenerate,
+                    icon: _isGenerating
+                        ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(strokeWidth: 2))
+                        : const Icon(Icons.refresh, size: 20),
+                    label: const Text(
+                      'NEW CODE',
+                      style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                    ),
+                    style: OutlinedButton.styleFrom(
+                      foregroundColor: const Color(0xFF0F172A),
+                      padding: const EdgeInsets.symmetric(vertical: 16),
+                      side: const BorderSide(color: Color(0xFF0F172A), width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                    ),
+                  ),
+                ),
+              ],
+            ),
+          ] else ...[
+            // Single Button: Initial State before any code is generated
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton.icon(
+                onPressed: _isGenerating ? null : _handleGenerate,
+                icon: _isGenerating
+                    ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                    : const Icon(Icons.qr_code),
+                label: const Text(
+                  'GENERATE CODE NOW',
+                  style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
+                ),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF0F172A),
+                  padding: const EdgeInsets.symmetric(vertical: 16),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
               ),
             ),
-          ),
+          ],
         ],
       ),
     );
