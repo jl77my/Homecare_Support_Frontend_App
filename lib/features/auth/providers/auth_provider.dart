@@ -1,3 +1,4 @@
+// lib/features/auth/providers/auth_provider.dart
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -37,14 +38,12 @@ final authServiceProvider = Provider<AuthService>((ref) {
 
 class AuthNotifier extends StateNotifier<AuthState> {
   AuthNotifier(this._authService) : super(const AuthState());
-
   final AuthService _authService;
 
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final user = await _authService.login(email: email, password: password);
-      // Corrected: Uses the actual returned JWT token string
       state = AuthState(
         user: user,
         token: user.token ?? user.id,
@@ -78,6 +77,64 @@ class AuthNotifier extends StateNotifier<AuthState> {
       return true;
     } catch (error) {
       state = AuthState(
+        isLoading: false,
+        errorMessage: error.toString().replaceFirst('Exception: ', ''),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> updateProfile({
+    required String name,
+    required String phoneNumber,
+    required String gender,
+    String? profilePhotoUrl,
+  }) async {
+    if (state.token == null || state.user == null) return false;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _authService.updateProfile(
+        token: state.token!,
+        name: name,
+        phoneNumber: phoneNumber,
+        gender: gender,
+        profilePhotoUrl: profilePhotoUrl,
+      );
+      
+      // Update local state directly so UI refreshes immediately
+      final updatedUser = state.user!.copyWith(
+        name: name,
+        phoneNumber: phoneNumber,
+        gender: gender,
+        profilePhotoUrl: profilePhotoUrl,
+      );
+      state = state.copyWith(user: updatedUser, isLoading: false);
+      return true;
+    } catch (error) {
+      state = state.copyWith(
+        isLoading: false,
+        errorMessage: error.toString().replaceFirst('Exception: ', ''),
+      );
+      return false;
+    }
+  }
+
+  Future<bool> changePassword({
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    if (state.token == null) return false;
+    state = state.copyWith(isLoading: true, clearError: true);
+    try {
+      await _authService.changePassword(
+        token: state.token!,
+        currentPassword: currentPassword,
+        newPassword: newPassword,
+      );
+      state = state.copyWith(isLoading: false);
+      return true;
+    } catch (error) {
+      state = state.copyWith(
         isLoading: false,
         errorMessage: error.toString().replaceFirst('Exception: ', ''),
       );

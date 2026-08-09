@@ -1,3 +1,4 @@
+// lib/features/auth/services/auth_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 import '../models/user_model.dart';
@@ -13,6 +14,11 @@ class AuthService {
 
   final http.Client _client;
   final String _baseUrl;
+
+  Map<String, String> _headers(String? token) => {
+        'Content-Type': 'application/json',
+        if (token != null) 'Authorization': 'Bearer $token',
+      };
 
   Future<UserModel> login({required String email, required String password}) {
     return _sendAuthRequest(
@@ -38,16 +44,51 @@ class AuthService {
     );
   }
 
+  Future<void> updateProfile({
+    required String token,
+    required String name,
+    String? phoneNumber,
+    String? gender,
+    String? profilePhotoUrl,
+  }) async {
+    final response = await _client.put(
+      Uri.parse('$_baseUrl/users/profile'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'name': name,
+        'phoneNumber': phoneNumber,
+        'gender': gender,
+        'profilePhotoUrl': profilePhotoUrl,
+      }),
+    );
+    _parseBasicResponse(response);
+  }
+
+  Future<void> changePassword({
+    required String token,
+    required String currentPassword,
+    required String newPassword,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/users/change-password'),
+      headers: _headers(token),
+      body: jsonEncode({
+        'currentPassword': currentPassword,
+        'newPassword': newPassword,
+      }),
+    );
+    _parseBasicResponse(response);
+  }
+
   Future<UserModel> _sendAuthRequest({
     required String endpoint,
     required Map<String, dynamic> payload,
   }) async {
     late final http.Response response;
-
     try {
       response = await _client.post(
         Uri.parse('$_baseUrl$endpoint'),
-        headers: const {'Content-Type': 'application/json'},
+        headers: _headers(null),
         body: jsonEncode(payload),
       );
     } catch (error) {
@@ -67,6 +108,14 @@ class AuthService {
         decodedBody['error']?.toString() ??
         'Authentication failed';
     throw Exception(message);
+  }
+
+  void _parseBasicResponse(http.Response response) {
+    final decoded = jsonDecode(response.body);
+    if (response.statusCode >= 200 && response.statusCode < 300) {
+      return;
+    }
+    throw Exception(decoded['message'] ?? decoded['error'] ?? 'Request failed');
   }
 
   Map<String, dynamic> _decodeResponse(String body) {

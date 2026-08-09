@@ -1,84 +1,96 @@
-import 'package:flutter_riverpod/flutter_riverpod.dart';   
-import '../../../core/models/models.dart';   
-import '../../auth/providers/auth_provider.dart';   
-import '../services/family_service.dart';   
+import 'package:flutter_riverpod/flutter_riverpod.dart';
+import '../../../core/models/models.dart';
+import '../../auth/providers/auth_provider.dart';
+import '../services/family_service.dart';
 
-class FamilyDashboardState {         
-  final List<CareTask> tasks;       
-  final HealthVitals? latestVital;         
-  final CareReport? latestReport;         
-  final List<CareReport> reports;    
-  final ChatMessage? latestMessage;         
-  final List<Map<String, String>> linkedSeniors;         
-  final List<ChatMessage> currentChatMessages;         
-  final List<dynamic> activeCaregivers;         
-  final List<dynamic> activeFamilyMembers;         
-  final String selectedElderlyId;         
-  final int totalReportsCount;         
-  final bool isLoading;         
+class FamilyDashboardState {
+  final List<CareTask> tasks;
+  final HealthVitals? latestVital;
+  final CareReport? latestReport;
+  final List<CareReport> reports;
+  final ChatMessage? latestMessage;
+  final List<Map<String, String>> linkedSeniors;
+  final List<ChatMessage> currentChatMessages;
+  final List<dynamic> activeCaregivers;
+  final List<dynamic> activeFamilyMembers;
+  final String selectedElderlyId;
+  final int totalReportsCount;
+  final bool isLoading;
   final String? errorMessage;
-  final String? todayMood; // ADDED
+  final String? todayMood; 
+  final String? lastReadMessageId; // NEW: Tracks the ID of the last read message
 
-  const FamilyDashboardState({               
-    this.tasks = const [],           
-    this.latestVital,               
-    this.latestReport,            
-    this.reports = const [],             
-    this.latestMessage,               
-    this.linkedSeniors = const [],               
-    this.currentChatMessages = const [],               
-    this.activeCaregivers = const [],               
-    this.activeFamilyMembers = const [],               
-    this.selectedElderlyId = '',               
-    this.totalReportsCount = 0,               
-    this.isLoading = false,               
+  const FamilyDashboardState({
+    this.tasks = const [],
+    this.latestVital,
+    this.latestReport,
+    this.reports = const [],
+    this.latestMessage,
+    this.linkedSeniors = const [],
+    this.currentChatMessages = const [],
+    this.activeCaregivers = const [],
+    this.activeFamilyMembers = const [],
+    this.selectedElderlyId = '',
+    this.totalReportsCount = 0,
+    this.isLoading = false,
     this.errorMessage,
-    this.todayMood, // ADDED
-  });         
+    this.todayMood, 
+    this.lastReadMessageId, // NEW
+  });
 
-  FamilyDashboardState copyWith({               
-    List<CareTask>? tasks,           
-    HealthVitals? latestVital,               
-    CareReport? latestReport,              
-    List<CareReport>? reports,           
-    ChatMessage? latestMessage,               
-    List<Map<String, String>>? linkedSeniors,               
-    List<ChatMessage>? currentChatMessages,               
-    List<dynamic>? activeCaregivers,               
-    List<dynamic>? activeFamilyMembers,               
-    String? selectedElderlyId,               
-    int? totalReportsCount,               
-    bool? isLoading,               
-    String? errorMessage,               
+  FamilyDashboardState copyWith({
+    List<CareTask>? tasks,
+    HealthVitals? latestVital,
+    CareReport? latestReport,
+    List<CareReport>? reports,
+    ChatMessage? latestMessage,
+    List<Map<String, String>>? linkedSeniors,
+    List<ChatMessage>? currentChatMessages,
+    List<dynamic>? activeCaregivers,
+    List<dynamic>? activeFamilyMembers,
+    String? selectedElderlyId,
+    int? totalReportsCount,
+    bool? isLoading,
+    String? errorMessage,
     bool clearError = false,
-    String? todayMood, // ADDED
-  }) {               
-    return FamilyDashboardState(                     
-      tasks: tasks ?? this.tasks,               
-      latestVital: latestVital ?? this.latestVital,                     
-      latestReport: latestReport ?? this.latestReport,                   
-      reports: reports ?? this.reports,                
-      latestMessage: latestMessage ?? this.latestMessage,                     
-      linkedSeniors: linkedSeniors ?? this.linkedSeniors,                     
-      currentChatMessages: currentChatMessages ?? this.currentChatMessages,                     
-      activeCaregivers: activeCaregivers ?? this.activeCaregivers,                     
-      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,                     
-      selectedElderlyId: selectedElderlyId ?? this.selectedElderlyId,                     
-      totalReportsCount: totalReportsCount ?? this.totalReportsCount,                     
-      isLoading: isLoading ?? this.isLoading,                     
+    String? todayMood, 
+    String? lastReadMessageId, // NEW
+  }) {
+    return FamilyDashboardState(
+      tasks: tasks ?? this.tasks,
+      latestVital: latestVital ?? this.latestVital,
+      latestReport: latestReport ?? this.latestReport,
+      reports: reports ?? this.reports,
+      latestMessage: latestMessage ?? this.latestMessage,
+      linkedSeniors: linkedSeniors ?? this.linkedSeniors,
+      currentChatMessages: currentChatMessages ?? this.currentChatMessages,
+      activeCaregivers: activeCaregivers ?? this.activeCaregivers,
+      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,
+      selectedElderlyId: selectedElderlyId ?? this.selectedElderlyId,
+      totalReportsCount: totalReportsCount ?? this.totalReportsCount,
+      isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
-      todayMood: todayMood ?? this.todayMood, // ADDED
-    );  
+      todayMood: todayMood ?? this.todayMood, 
+      lastReadMessageId: lastReadMessageId ?? this.lastReadMessageId, // NEW
+    );
   }
 }
 
-final familyServiceProvider = Provider<FamilyService>((ref) => FamilyService());   
+final familyServiceProvider = Provider<FamilyService>((ref) => FamilyService());
 
-class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {         
-  FamilyDashboardNotifier(this._service, this._ref) : super(const FamilyDashboardState());         
-  final FamilyService _service;         
-  final Ref _ref;         
-  String? get _token => _ref.read(authProvider).token;  
+class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
+  FamilyDashboardNotifier(this._service, this._ref) : super(const FamilyDashboardState());
+  final FamilyService _service;
+  final Ref _ref;
+
+  String? get _token => _ref.read(authProvider).token;
+
+  // NEW: Method to mark the latest message as read
+  void markChatAsRead() {
+    if (state.currentChatMessages.isNotEmpty) {
+      state = state.copyWith(lastReadMessageId: state.currentChatMessages.last.id);
+    }
+  }  
 
   Future<bool> linkFamilyByCode({          
     required String code,          

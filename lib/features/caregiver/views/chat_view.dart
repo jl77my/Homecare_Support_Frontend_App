@@ -1,7 +1,7 @@
 // lib/features/caregiver/views/chat_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
 import '../../family/providers/family_provider.dart';
@@ -15,8 +15,9 @@ class ChatView extends ConsumerStatefulWidget {
 }
 
 class _ChatViewState extends ConsumerState<ChatView> {
-  Map<String, String>? _activeChannel; // Selected senior channel
+  Map<String, String>? _activeChannel;
   final _textController = TextEditingController();
+  bool _hasAutoFetched = false;
 
   @override
   void dispose() {
@@ -24,17 +25,68 @@ class _ChatViewState extends ConsumerState<ChatView> {
     super.dispose();
   }
 
+  String _getDateHeader(DateTime messageDate) {
+    final now = DateTime.now();
+    final today = DateTime(now.year, now.month, now.day);
+    final yesterday = today.subtract(const Duration(days: 1));
+    final msgDate = DateTime(messageDate.year, messageDate.month, messageDate.day);
+
+    if (msgDate == today) {
+      return 'TODAY';
+    } else if (msgDate == yesterday) {
+      return 'YESTERDAY';
+    } else {
+      return DateFormat('MMM d, yyyy').format(messageDate);
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
-    final familyState = ref.watch(familyDashboardProvider);
-    final linkedSeniors = familyState.linkedSeniors; // List<Map<String, String>>
-    final caregiverState = ref.watch(caregiverProvider);
-    final messages = caregiverState.currentChatMessages; // Strongly typed ChatMessage list
     final authState = ref.watch(authProvider);
     final currentUser = authState.user;
+    final isFamily = currentUser?.role.toLowerCase() == 'family';
 
-    // Level 1: Channel List View if no channel selected
-    if (_activeChannel == null) {
+    final familyState = ref.watch(familyDashboardProvider);
+    final caregiverState = ref.watch(caregiverProvider);
+
+    final List<Map<String, String>> channelsList = isFamily 
+        ? familyState.linkedSeniors 
+        : caregiverState.assignedSeniors;
+
+    final messages = isFamily 
+        ? familyState.currentChatMessages 
+        : caregiverState.currentChatMessages;
+
+    final isLoading = isFamily ? familyState.isLoading : caregiverState.isLoading;
+
+    final bool autoBypass = isFamily && channelsList.length == 1;
+    final activeChannelData = _activeChannel ?? (autoBypass ? channelsList.first : null);
+
+    if (autoBypass && !_hasAutoFetched && activeChannelData != null) {
+      _hasAutoFetched = true;
+      Future.microtask(() {
+        ref.read(familyDashboardProvider.notifier).fetchChatMessages(activeChannelData['elderlyId']!);
+      });
+    }
+
+    // Auto-mark as read when viewing the active channel
+    if (activeChannelData != null && messages.isNotEmpty) {
+      final latestMsg = messages.last;
+      if (latestMsg.senderId != currentUser?.id) {
+        if (isFamily && familyState.lastReadMessageId != latestMsg.id) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(familyDashboardProvider.notifier).markChatAsRead();
+          });
+        } else if (!isFamily && caregiverState.lastReadMessageId != latestMsg.id) {
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            ref.read(caregiverProvider.notifier).markChatAsRead();
+          });
+        }
+      }
+    }
+
+    // --- LEVEL 1: DIRECTORY LIST VIEW (WhatsApp Style) ---
+    if (activeChannelData == null) {
       return Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
@@ -45,7 +97,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
               style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
             ),
           ),
-          if (linkedSeniors.isEmpty)
+          if (channelsList.isEmpty)
             Expanded(
               child: Center(
                 child: Container(
@@ -66,10 +118,10 @@ class _ChatViewState extends ConsumerState<ChatView> {
           else
             Expanded(
               child: ListView.separated(
-                itemCount: linkedSeniors.length,
+                itemCount: channelsList.length,
                 separatorBuilder: (_, __) => const SizedBox(height: 12),
                 itemBuilder: (context, index) {
-                  final senior = linkedSeniors[index];
+                  final senior = channelsList[index];
                   return Card(
                     elevation: 0,
                     shape: RoundedRectangleBorder(
@@ -96,10 +148,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
                         setState(() {
                           _activeChannel = senior;
                         });
-                        // Trigger fetchChatMessages when channel is tapped
                         final elderlyId = senior['elderlyId'] ?? '';
                         if (elderlyId.isNotEmpty) {
-                          ref.read(caregiverProvider.notifier).fetchChatMessages(elderlyId);
+                          if (isFamily) {
+                            ref.read(familyDashboardProvider.notifier).fetchChatMessages(elderlyId);
+                          } else {
+                            ref.read(caregiverProvider.notifier).fetchChatMessages(elderlyId);
+                          }
                         }
                       },
                     ),
@@ -111,13 +166,15 @@ class _ChatViewState extends ConsumerState<ChatView> {
       );
     }
 
-    // Level 2: Isolated Chat Thread View
-    final channelName = _activeChannel!['name'] ?? 'Senior Patient';
-    final activeElderlyId = _activeChannel!['elderlyId'] ?? '';
+    // --- LEVEL 2: ISOLATED CHAT THREAD VIEW ---
+    final channelName = activeChannelData['name'] ?? 'Senior Patient';
+    final activeElderlyId = activeChannelData['elderlyId'] ?? '';
+    
+    // Reverse the list for seamless bottom-to-top rendering
+    final reversedMessages = messages.reversed.toList();
 
     return Column(
       children: [
-        // Thread Header Bar
         Container(
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
           decoration: BoxDecoration(
@@ -127,10 +184,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
           ),
           child: Row(
             children: [
-              IconButton(
-                icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
-                onPressed: () => setState(() => _activeChannel = null),
-              ),
+              if (!autoBypass)
+                IconButton(
+                  icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+                  onPressed: () => setState(() => _activeChannel = null),
+                ),
               const SizedBox(width: 8),
               Expanded(
                 child: Column(
@@ -148,8 +206,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
           ),
         ),
         const SizedBox(height: 12),
-
-        // Message List Thread
         Expanded(
           child: Container(
             padding: const EdgeInsets.all(16),
@@ -158,9 +214,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
               borderRadius: BorderRadius.circular(28),
               border: Border.all(color: const Color(0xFFF1F5F9)),
             ),
-            child: caregiverState.isLoading
+            child: isLoading
                 ? const Center(child: CircularProgressIndicator())
-                : messages.isEmpty
+                : reversedMessages.isEmpty
                     ? const Center(
                         child: Text(
                           'No messages yet in this channel.\nType below to start communicating.',
@@ -168,51 +224,103 @@ class _ChatViewState extends ConsumerState<ChatView> {
                           style: TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.w600, fontSize: 13),
                         ),
                       )
-                    : ListView.separated(
-                        itemCount: messages.length,
-                        separatorBuilder: (_, __) => const SizedBox(height: 10),
+                    : ListView.builder(
+                        reverse: true, // Forces layout to anchor bottom and expand upward natively
+                        itemCount: reversedMessages.length,
                         itemBuilder: (context, index) {
-                          final msg = messages[index];
+                          final msg = reversedMessages[index];
                           final isMe = msg.senderId == currentUser?.id;
-                          return Align(
-                            alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
-                            child: Container(
-                              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-                              decoration: BoxDecoration(
-                                color: isMe ? const Color(0xFF2563EB) : const Color(0xFFF1F5F9),
-                                borderRadius: BorderRadius.circular(20),
-                              ),
-                              child: Column(
-                                crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
-                                children: [
-                                  Text(
-                                    msg.senderName,
-                                    style: TextStyle(
-                                      fontSize: 10,
-                                      fontWeight: FontWeight.bold,
-                                      color: isMe ? Colors.white70 : const Color(0xFF64748B),
+                          
+                          // Because list is reversed, we compare with index + 1 (the older message chronologically)
+                          bool showDateHeader = false;
+                          if (index == reversedMessages.length - 1) {
+                            showDateHeader = true;
+                          } else {
+                            final prevMsg = reversedMessages[index + 1];
+                            final prevDate = prevMsg.timestamp;
+                            final currDate = msg.timestamp;
+                            if (prevDate.year != currDate.year || 
+                                prevDate.month != currDate.month || 
+                                prevDate.day != currDate.day) {
+                              showDateHeader = true;
+                            }
+                          }
+
+                          final timeString = DateFormat('h:mm a').format(msg.timestamp.toLocal());
+
+                          return Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            children: [
+                              if (showDateHeader)
+                                Center(
+                                  child: Container(
+                                    margin: const EdgeInsets.symmetric(vertical: 16),
+                                    padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
+                                    decoration: BoxDecoration(
+                                      color: const Color(0xFFF1F5F9),
+                                      borderRadius: BorderRadius.circular(12),
+                                    ),
+                                    child: Text(
+                                      _getDateHeader(msg.timestamp),
+                                      style: const TextStyle(
+                                        fontSize: 10, 
+                                        fontWeight: FontWeight.w900, 
+                                        color: Color(0xFF64748B),
+                                        letterSpacing: 0.5,
+                                      ),
                                     ),
                                   ),
-                                  const SizedBox(height: 2),
-                                  Text(
-                                    msg.text,
-                                    style: TextStyle(
-                                      color: isMe ? Colors.white : const Color(0xFF0F172A),
-                                      fontWeight: FontWeight.w600,
-                                      fontSize: 13,
-                                    ),
+                                ),
+                              Align(
+                                alignment: isMe ? Alignment.centerRight : Alignment.centerLeft,
+                                child: Container(
+                                  margin: const EdgeInsets.only(bottom: 10),
+                                  padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+                                  decoration: BoxDecoration(
+                                    color: isMe ? const Color(0xFF2563EB) : const Color(0xFFF8FAFC),
+                                    borderRadius: BorderRadius.circular(20),
+                                    border: isMe ? null : Border.all(color: const Color(0xFFE2E8F0)),
                                   ),
-                                ],
+                                  child: Column(
+                                    crossAxisAlignment: isMe ? CrossAxisAlignment.end : CrossAxisAlignment.start,
+                                    children: [
+                                      Text(
+                                        msg.senderName,
+                                        style: TextStyle(
+                                          fontSize: 10,
+                                          fontWeight: FontWeight.bold,
+                                          color: isMe ? Colors.white70 : const Color(0xFF64748B),
+                                        ),
+                                      ),
+                                      const SizedBox(height: 2),
+                                      Text(
+                                        msg.text,
+                                        style: TextStyle(
+                                          color: isMe ? Colors.white : const Color(0xFF0F172A),
+                                          fontWeight: FontWeight.w600,
+                                          fontSize: 14,
+                                        ),
+                                      ),
+                                      const SizedBox(height: 4),
+                                      Text(
+                                        timeString,
+                                        style: TextStyle(
+                                          fontSize: 9,
+                                          fontWeight: FontWeight.w800,
+                                          color: isMe ? Colors.white70 : const Color(0xFF94A3B8),
+                                        ),
+                                      ),
+                                    ],
+                                  ),
+                                ),
                               ),
-                            ),
+                            ],
                           );
                         },
                       ),
           ),
         ),
         const SizedBox(height: 12),
-
-        // Message Input Box
         Row(
           children: [
             Expanded(
@@ -239,17 +347,18 @@ class _ChatViewState extends ConsumerState<ChatView> {
                 onPressed: () async {
                   final text = _textController.text.trim();
                   if (text.isNotEmpty && activeElderlyId.isNotEmpty) {
-                    final success = await ref.read(caregiverProvider.notifier).sendChatMessage(
-                          elderlyId: activeElderlyId,
-                          messageText: text,
-                        );
+                    final success = isFamily 
+                      ? await ref.read(familyDashboardProvider.notifier).sendChatMessage(
+                            elderlyId: activeElderlyId,
+                            messageText: text,
+                          )
+                      : await ref.read(caregiverProvider.notifier).sendChatMessage(
+                            elderlyId: activeElderlyId,
+                            messageText: text,
+                          );
+
                     if (success) {
                       _textController.clear();
-                      if (mounted) {
-                        ScaffoldMessenger.of(context).showSnackBar(
-                          const SnackBar(content: Text('Message sent to channel!')),
-                        );
-                      }
                     }
                   }
                 },

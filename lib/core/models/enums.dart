@@ -115,19 +115,3 @@ enum ReportCategory {
   }
 }
 
-enum ReportSeverity {
-  routine,
-  attention,
-  urgent;
-
-  String get label {
-    switch (this) {
-      case ReportSeverity.routine:
-        return 'Routine Log';
-      case ReportSeverity.attention:
-        return 'Attention Needed';
-      case ReportSeverity.urgent:
-        return 'Urgent Alert';
-    }
-  }
-}

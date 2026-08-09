@@ -1,9 +1,12 @@
 // lib/core/widgets/bottom_navigation_bar.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import '../../features/auth/providers/auth_provider.dart';
+import '../../features/family/providers/family_provider.dart';
 import '../../features/caregiver/providers/caregiver_provider.dart';
 import '../../features/elderly/providers/elderly_provider.dart';
+import '../../../core/models/enums.dart'; // Needed for TaskStatus
+import '../../../core/models/models.dart'; // Needed for ChatMessage
 
 class CustomBottomNavigationBar extends ConsumerWidget {
   final String activeTab;
@@ -15,10 +18,41 @@ class CustomBottomNavigationBar extends ConsumerWidget {
     required this.onTabSelected,
   });
 
+  int _calculateUnreadCount(List<ChatMessage> msgs, String? lastReadId, String currentUserId) {
+    if (msgs.isEmpty) return 0;
+    int count = 0;
+    for (int i = msgs.length - 1; i >= 0; i--) {
+      if (msgs[i].id == lastReadId) break;
+      if (msgs[i].senderId != currentUserId) {
+        count++;
+      }
+    }
+    return count;
+  }
+
   @override
   Widget build(BuildContext context, WidgetRef ref) {
+    final user = ref.watch(authProvider).user;
+    if (user == null) return const SizedBox.shrink();
+
+    final isFamily = user.role.toLowerCase() == 'family';
+    final isCaregiver = user.role.toLowerCase() == 'caregiver';
+
     final pendingReminders = ref.watch(elderlyProvider).reminders.where((r) => !r.isCompleted).length;
-    final unacknowledgedReports = ref.watch(caregiverProvider).reports.length;
+    final unacknowledgedReports = isFamily ? ref.watch(familyDashboardProvider).reports.length : 0;
+
+    int unreadChats = 0;
+    int pendingTasks = 0; // NEW: Track active tasks
+
+    if (isFamily) {
+      final familyState = ref.watch(familyDashboardProvider);
+      unreadChats = _calculateUnreadCount(familyState.currentChatMessages, familyState.lastReadMessageId, user.id);
+      pendingTasks = familyState.tasks.where((t) => t.status == TaskStatus.pending).length;
+    } else if (isCaregiver) {
+      final caregiverState = ref.watch(caregiverProvider);
+      unreadChats = _calculateUnreadCount(caregiverState.currentChatMessages, caregiverState.lastReadMessageId, user.id);
+      pendingTasks = caregiverState.tasks.where((t) => t.status == TaskStatus.pending).length;
+    }
 
     return Container(
       margin: const EdgeInsets.all(16),
@@ -56,8 +90,24 @@ class CustomBottomNavigationBar extends ConsumerWidget {
             badgeCount: pendingReminders,
             badgeColor: const Color(0xFFEF4444),
           ),
-          _buildNavItem(context, 'tasks', Icons.check_box_outlined, 'Tasks', activeTab),
-          _buildNavItem(context, 'chat', Icons.chat_bubble_outline, 'Connect', activeTab),
+          _buildNavItem(
+            context, 
+            'tasks', 
+            Icons.check_box_outlined, 
+            'Tasks', 
+            activeTab,
+            badgeCount: pendingTasks, // NEW ACTIVE TASKS BADGE
+            badgeColor: const Color(0xFFF59E0B), // Distinct amber color
+          ),
+          _buildNavItem(
+            context, 
+            'chat', 
+            Icons.chat_bubble_outline, 
+            'Connect', 
+            activeTab,
+            badgeCount: unreadChats,
+            badgeColor: const Color(0xFF10B981),
+          ),
           _buildNavItem(context, 'profile', Icons.person_outline, 'Profile', activeTab),
         ],
       ),

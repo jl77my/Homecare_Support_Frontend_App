@@ -1,10 +1,14 @@
+// lib/features/auth/models/user_model.dart
 class UserModel {
   final String id;
   final String name;
   final String email;
   final String role;
   final String? token;
-
+  final String? phoneNumber;
+  final String? gender;
+  final String? profilePhotoUrl;
+  
   // 5 Mandatory Audit Columns
   final String? createdBy;
   final DateTime? datetimeCreated;
@@ -17,6 +21,9 @@ class UserModel {
     required this.email,
     required this.role,
     this.token,
+    this.phoneNumber,
+    this.gender,
+    this.profilePhotoUrl,
     this.createdBy,
     this.datetimeCreated,
     this.updatedBy,
@@ -30,6 +37,9 @@ class UserModel {
       email: '${json['Email'] ?? json['email'] ?? ''}',
       role: '${json['Role'] ?? json['role'] ?? 'family'}',
       token: json['token']?.toString(),
+      phoneNumber: json['PhoneNumber']?.toString() ?? json['phoneNumber']?.toString(),
+      gender: json['Gender']?.toString() ?? json['gender']?.toString(),
+      profilePhotoUrl: json['ProfilePhotoUrl']?.toString() ?? json['profilePhotoUrl']?.toString(),
       createdBy: json['CreatedBy']?.toString(),
       datetimeCreated: json['DatetimeCreated'] != null
           ? DateTime.tryParse(json['DatetimeCreated'])
@@ -47,6 +57,9 @@ class UserModel {
     String? email,
     String? role,
     String? token,
+    String? phoneNumber,
+    String? gender,
+    String? profilePhotoUrl,
     String? createdBy,
     DateTime? datetimeCreated,
     String? updatedBy,
@@ -58,6 +71,9 @@ class UserModel {
       email: email ?? this.email,
       role: role ?? this.role,
       token: token ?? this.token,
+      phoneNumber: phoneNumber ?? this.phoneNumber,
+      gender: gender ?? this.gender,
+      profilePhotoUrl: profilePhotoUrl ?? this.profilePhotoUrl,
       createdBy: createdBy ?? this.createdBy,
       datetimeCreated: datetimeCreated ?? this.datetimeCreated,
       updatedBy: updatedBy ?? this.updatedBy,
