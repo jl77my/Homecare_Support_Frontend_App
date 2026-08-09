@@ -305,5 +305,16 @@ class CaregiverService {
     );
     _parseResponse(response);
   }
+
+  Future<String?> getElderlyMoods(String token, String elderlyId) async {          
+    // The endpoint is /family/moods/ or /caregiver/moods/ respectively
+    final endpoint = _baseUrl.contains('family') ? 'family' : 'caregiver';
+    final response = await _client.get(              
+      Uri.parse('$_baseUrl/$endpoint/moods/$elderlyId'),              
+      headers: _headers(token),          
+    );          
+    final data = _parseResponse(response);          
+    return data['todayMood'] as String?;      
+  }
 }
 

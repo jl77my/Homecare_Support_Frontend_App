@@ -137,13 +137,15 @@ class FamilyService {
     return _parseResponse(response);   
   }
 
-  Future<List<dynamic>> getElderlyMoods(String token, String patientId) async {          
+  Future<String?> getElderlyMoods(String token, String elderlyId) async {          
+    // The endpoint is /family/moods/ or /caregiver/moods/ respectively
+    final endpoint = _baseUrl.contains('family') ? 'family' : 'caregiver';
     final response = await _client.get(              
-      Uri.parse('$_baseUrl/family/moods/$patientId'),              
+      Uri.parse('$_baseUrl/$endpoint/moods/$elderlyId'),              
       headers: _headers(token),          
     );          
     final data = _parseResponse(response);          
-    return data['moods'] as List<dynamic>? ?? [];      
+    return data['todayMood'] as String?;      
   }
 
   Future<List<ChatMessage>> getChatMessages({          
@@ -201,4 +203,5 @@ class FamilyService {
     final message = decoded['message'] ?? decoded['error'] ?? 'Request failed';          
     throw Exception(message);      
   }
+  
 }

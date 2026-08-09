@@ -1,80 +1,83 @@
-// lib/features/caregiver/providers/caregiver_provider.dart
-import 'package:flutter/foundation.dart';  
-import 'package:flutter_riverpod/flutter_riverpod.dart';    
-import 'package:socket_io_client/socket_io_client.dart' as IO;    
-import 'package:audioplayers/audioplayers.dart';   
-import '../../../core/models/models.dart';    
-import '../../auth/providers/auth_provider.dart';    
-import '../services/caregiver_service.dart';    
+import 'package:flutter/foundation.dart';   
+import 'package:flutter_riverpod/flutter_riverpod.dart';     
+import 'package:socket_io_client/socket_io_client.dart' as IO;     
+import 'package:audioplayers/audioplayers.dart';    
+import '../../../core/models/models.dart';     
+import '../../auth/providers/auth_provider.dart';     
+import '../services/caregiver_service.dart';     
 
-class CaregiverState {            
-  final List<CareTask> tasks;            
-  final List<HealthVitals> vitals;            
-  final List<CareReport> reports;            
-  final List<Map<String, String>> assignedSeniors;            
-  final List<ChatMessage> currentChatMessages;            
-  final List<dynamic> activeCaregivers;            
-  final List<dynamic> activeFamilyMembers;            
-  final String activeElderlyId;            
-  final bool isLoading;            
-  final String? errorMessage;         
-  final String? activeReminderMessage;          
+class CaregiverState {               
+  final List<CareTask> tasks;               
+  final List<HealthVitals> vitals;               
+  final List<CareReport> reports;               
+  final List<Map<String, String>> assignedSeniors;               
+  final List<ChatMessage> currentChatMessages;               
+  final List<dynamic> activeCaregivers;               
+  final List<dynamic> activeFamilyMembers;               
+  final String activeElderlyId;               
+  final bool isLoading;               
+  final String? errorMessage;            
+  final String? activeReminderMessage;
+  final String? todayMood; // ADDED
 
-  const CaregiverState({                    
-    this.tasks = const [],                    
-    this.vitals = const [],                    
-    this.reports = const [],                    
-    this.assignedSeniors = const [],                    
-    this.currentChatMessages = const [],                    
-    this.activeCaregivers = const [],                    
-    this.activeFamilyMembers = const [],                    
-    this.activeElderlyId = '',                    
-    this.isLoading = false,                    
-    this.errorMessage,               
-    this.activeReminderMessage,          
-  });            
+  const CaregiverState({                         
+    this.tasks = const [],                         
+    this.vitals = const [],                         
+    this.reports = const [],                         
+    this.assignedSeniors = const [],                         
+    this.currentChatMessages = const [],                         
+    this.activeCaregivers = const [],                         
+    this.activeFamilyMembers = const [],                         
+    this.activeElderlyId = '',                         
+    this.isLoading = false,                         
+    this.errorMessage,                    
+    this.activeReminderMessage,
+    this.todayMood, // ADDED
+  });               
 
-  CaregiverState copyWith({                    
-    List<CareTask>? tasks,                    
-    List<HealthVitals>? vitals,                    
-    List<CareReport>? reports,                    
-    List<Map<String, String>>? assignedSeniors,                    
-    List<ChatMessage>? currentChatMessages,                    
-    List<dynamic>? activeCaregivers,                    
-    List<dynamic>? activeFamilyMembers,                    
-    String? activeElderlyId,                    
-    bool? isLoading,                    
-    String? errorMessage,               
-    String? activeReminderMessage,                
-    bool clearError = false,               
-    bool clearReminder = false,          
-  }) {                    
-    return CaregiverState(                            
-      tasks: tasks ?? this.tasks,                            
-      vitals: vitals ?? this.vitals,                            
-      reports: reports ?? this.reports,                            
-      assignedSeniors: assignedSeniors ?? this.assignedSeniors,                            
-      currentChatMessages: currentChatMessages ?? this.currentChatMessages,                            
-      activeCaregivers: activeCaregivers ?? this.activeCaregivers,                            
-      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,                            
-      activeElderlyId: activeElderlyId ?? this.activeElderlyId,                            
-      isLoading: isLoading ?? this.isLoading,                            
-      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,                     
-      activeReminderMessage: clearReminder ? null : activeReminderMessage ?? this.activeReminderMessage,                    
-    ); 
+  CaregiverState copyWith({                         
+    List<CareTask>? tasks,                         
+    List<HealthVitals>? vitals,                         
+    List<CareReport>? reports,                         
+    List<Map<String, String>>? assignedSeniors,                         
+    List<ChatMessage>? currentChatMessages,                         
+    List<dynamic>? activeCaregivers,                         
+    List<dynamic>? activeFamilyMembers,                         
+    String? activeElderlyId,                         
+    bool? isLoading,                         
+    String? errorMessage,                    
+    String? activeReminderMessage,                     
+    bool clearError = false,                    
+    bool clearReminder = false,
+    String? todayMood, // ADDED
+  }) {                         
+    return CaregiverState(                                   
+      tasks: tasks ?? this.tasks,                                   
+      vitals: vitals ?? this.vitals,                                   
+      reports: reports ?? this.reports,                                   
+      assignedSeniors: assignedSeniors ?? this.assignedSeniors,                                   
+      currentChatMessages: currentChatMessages ?? this.currentChatMessages,                                   
+      activeCaregivers: activeCaregivers ?? this.activeCaregivers,                                   
+      activeFamilyMembers: activeFamilyMembers ?? this.activeFamilyMembers,                                   
+      activeElderlyId: activeElderlyId ?? this.activeElderlyId,                                   
+      isLoading: isLoading ?? this.isLoading,                                   
+      errorMessage: clearError ? null : errorMessage ?? this.errorMessage,                            
+      activeReminderMessage: clearReminder ? null : activeReminderMessage ?? this.activeReminderMessage,
+      todayMood: todayMood ?? this.todayMood, // ADDED
+    );  
   }
 }
 
-final caregiverServiceProvider = Provider<CaregiverService>((ref) => CaregiverService());    
+final caregiverServiceProvider = Provider<CaregiverService>((ref) => CaregiverService());     
 
-class CaregiverNotifier extends StateNotifier<CaregiverState> {         
-  CaregiverNotifier(this._service, this._ref) : super(const CaregiverState()) {          
-    _initSocket();       
+class CaregiverNotifier extends StateNotifier<CaregiverState> {            
+  CaregiverNotifier(this._service, this._ref) : super(const CaregiverState()) {               
+    _initSocket();          
   }
-
-  final CaregiverService _service;         
-  final Ref _ref;      
-  IO.Socket? _socket;       
+  
+  final CaregiverService _service;            
+  final Ref _ref;         
+  IO.Socket? _socket;          
   final AudioPlayer _audioPlayer = AudioPlayer();    
 
   void _initSocket() {          
@@ -173,16 +176,21 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     }   
   }
 
-  Future<void> fetchCareReports(String elderlyId) async {
-    final token = _token;
-    if (token == null) return;
-    try {
-      final rawReports = await _service.getCareReports(token: token, patientId: elderlyId);
-      final parsedReports = rawReports.map((json) => CareReport.fromJson(json)).toList();
-      state = state.copyWith(reports: parsedReports);
-    } catch (e) {
-      _handleException(e);
-    }
+  Future<void> fetchCareReports(String elderlyId) async {     
+    final token = _token;     
+    if (token == null) return;     
+    try {       
+      final rawReports = await _service.getCareReports(token: token, patientId: elderlyId);       
+      final parsedReports = rawReports.map((json) => CareReport.fromJson(json)).toList(); 
+      final fetchedMood = await _service.getElderlyMoods(token, elderlyId); // ADDED Fetch Mood
+
+      state = state.copyWith(
+        reports: parsedReports,
+        todayMood: fetchedMood, // Set Mood
+      );     
+    } catch (e) {       
+      _handleException(e);     
+    }   
   }
 
   Future<void> fetchCareConnections(String elderlyId) async {                    
