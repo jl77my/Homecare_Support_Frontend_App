@@ -1,7 +1,7 @@
 // lib/features/caregiver/views/profile_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-
+import 'dart:convert';
 import '../../auth/providers/auth_provider.dart';
 import '../../elderly/widgets/pairing_code_modal.dart';
 import '../../family/views/family_pairing_view.dart';
@@ -11,7 +11,7 @@ import 'pairing_view.dart';
 
 class ProfileView extends ConsumerWidget {
   final VoidCallback? onNavigateToAccountSettings;
-  final VoidCallback? onNavigateToCareConnections;
+  final VoidCallback? onNavigateToCareConnections; // Added navigation callback
 
   const ProfileView({
     super.key,
@@ -56,30 +56,27 @@ class ProfileView extends ConsumerWidget {
               color: Colors.white,
               borderRadius: BorderRadius.circular(36),
               border: Border.all(color: const Color(0xFFF1F5F9)),
-              boxShadow: const [
-                BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 4)),
-              ],
+              boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 16, offset: Offset(0, 4))],
             ),
             child: Column(
               children: [
                 CircleAvatar(
                   radius: 40,
                   backgroundColor: const Color(0xFF0F172A),
-                  child: Text(
-                    user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                    style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
-                  ),
+                  backgroundImage: user.profilePhotoUrl != null && user.profilePhotoUrl!.startsWith('data:image')
+                      ? MemoryImage(base64Decode(user.profilePhotoUrl!.split(',')[1]))
+                      : (user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) as ImageProvider : null),
+                  child: user.profilePhotoUrl == null
+                      ? Text(
+                          user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
+                          style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+                        )
+                      : null,
                 ),
                 const SizedBox(height: 14),
-                Text(
-                  user.name,
-                  style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                ),
+                Text(user.name, style: const TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                 const SizedBox(height: 4),
-                Text(
-                  user.email,
-                  style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500),
-                ),
+                Text(user.email, style: const TextStyle(fontSize: 13, color: Color(0xFF64748B), fontWeight: FontWeight.w500)),
                 const SizedBox(height: 12),
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 6),
@@ -90,12 +87,7 @@ class ProfileView extends ConsumerWidget {
                   ),
                   child: Text(
                     'ROLE: ${user.role.toUpperCase()}',
-                    style: const TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w900,
-                      color: Color(0xFF1D4ED8),
-                      letterSpacing: 0.8,
-                    ),
+                    style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w900, color: Color(0xFF1D4ED8), letterSpacing: 0.8),
                   ),
                 ),
               ],
@@ -103,7 +95,7 @@ class ProfileView extends ConsumerWidget {
           ),
           const SizedBox(height: 20),
 
-          // Settings & Account Options List
+          // Settings & Account Options
           Container(
             decoration: BoxDecoration(
               color: Colors.white,
@@ -112,60 +104,40 @@ class ProfileView extends ConsumerWidget {
             ),
             child: Column(
               children: [
-                // 1. Elderly Permanent Code Generator Option
                 if (isElderly) ...[
                   ListTile(
                     leading: const Icon(Icons.qr_code_2, color: Color(0xFF2563EB)),
                     title: const Text('Generate Invitation Code', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                    subtitle: const Text('Share 6-digit code with caregiver or family', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                     trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                    onTap: () {
-                      showModalBottomSheet(
-                        context: context,
-                        isScrollControlled: true,
-                        shape: const RoundedRectangleBorder(
-                          borderRadius: BorderRadius.vertical(top: Radius.circular(36)),
-                        ),
-                        builder: (context) => const PairingCodeModal(),
-                      );
-                    },
+                    onTap: () => showModalBottomSheet(
+                      context: context,
+                      isScrollControlled: true,
+                      shape: const RoundedRectangleBorder(borderRadius: BorderRadius.vertical(top: Radius.circular(36))),
+                      builder: (context) => const PairingCodeModal(),
+                    ),
                   ),
                   const Divider(height: 1, indent: 60),
                 ],
-
-                // 2. Caregiver Permanent Link Option
                 if (isCaregiver) ...[
                   ListTile(
                     leading: const Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
                     title: const Text('Pair Additional Senior Patient', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                    subtitle: const Text('Enter 6-digit caregiver code (HC-XXXX)', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                     trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const PairingView()),
-                      );
-                    },
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PairingView())),
                   ),
                   const Divider(height: 1, indent: 60),
                 ],
-
-                // 3. Family Permanent Link Option
                 if (isFamily) ...[
                   ListTile(
                     leading: const Icon(Icons.family_restroom, color: Color(0xFF2563EB)),
                     title: const Text('Link Additional Senior Patient', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
-                    subtitle: const Text('Enter 6-digit family code (FAM-XXXX)', style: TextStyle(fontSize: 11, color: Color(0xFF64748B))),
                     trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
-                    onTap: () {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const FamilyPairingView()),
-                      );
-                    },
+                    onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const FamilyPairingView())),
                   ),
                   const Divider(height: 1, indent: 60),
                 ],
-
-                // 4. Account Settings Option
+                
+                // Account Settings Portal
                 ListTile(
                   leading: const Icon(Icons.settings_outlined, color: Color(0xFF2563EB)),
                   title: const Text('Account Settings', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
@@ -174,15 +146,15 @@ class ProfileView extends ConsumerWidget {
                     if (onNavigateToAccountSettings != null) {
                       onNavigateToAccountSettings!();
                     } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const AccountSettingsView()),
-                      );
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => AccountSettingsView(onBack: () => Navigator.pop(context))
+                      ));
                     }
                   },
                 ),
                 const Divider(height: 1, indent: 60),
 
-                // 5. Care Connections Option (Formerly Emergency Contacts)
+                // Care Connections Portal (Extracted back to separate view)
                 ListTile(
                   leading: const Icon(Icons.diversity_1, color: Color(0xFF2563EB)),
                   title: const Text('Care Connections', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
@@ -191,18 +163,17 @@ class ProfileView extends ConsumerWidget {
                     if (onNavigateToCareConnections != null) {
                       onNavigateToCareConnections!();
                     } else {
-                      Navigator.of(context).push(
-                        MaterialPageRoute(builder: (context) => const CareConnectionsView()),
-                      );
+                      Navigator.of(context).push(MaterialPageRoute(
+                        builder: (context) => CareConnectionsView(onBack: () => Navigator.pop(context))
+                      ));
                     }
                   },
                 ),
               ],
             ),
           ),
+          
           const SizedBox(height: 24),
-
-          // Sign Out Button
           SizedBox(
             width: double.infinity,
             child: ElevatedButton.icon(

@@ -1,3 +1,4 @@
+// lib/features/auth/views/auth_flow_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../../../core/models/enums.dart';
@@ -11,15 +12,15 @@ class AuthFlowView extends ConsumerStatefulWidget {
 }
 
 class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
-  String _step = 'role'; // 'role', 'register', 'login'
+  String _step = 'role'; 
   UserRole _selectedRole = UserRole.elderly;
-
-  // Controllers
+  
   final _regNameController = TextEditingController();
   final _regEmailController = TextEditingController();
   final _regPasswordController = TextEditingController();
   final _regConfirmPasswordController = TextEditingController();
   bool _showRegPassword = false;
+  bool _acceptedTerms = false; // FIX 3: Checkbox state
 
   final _loginEmailController = TextEditingController();
   final _loginPasswordController = TextEditingController();
@@ -28,7 +29,6 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
   String? _authError;
   String? _regSuccessMsg;
 
-  // Standard Email Validation Regular Expression
   final RegExp _emailRegExp = RegExp(
     r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
   );
@@ -53,12 +53,16 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
     });
   }
 
-  // Registration Handler with Email Validation
   Future<void> _handleRegister() async {
     setState(() {
       _authError = null;
       _regSuccessMsg = null;
     });
+
+    if (!_acceptedTerms) {
+      setState(() => _authError = 'You must agree to the Privacy Statement and Terms to create an account.');
+      return;
+    }
 
     final name = _regNameController.text.trim();
     final email = _regEmailController.text.trim();
@@ -71,7 +75,7 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
     }
 
     if (!_emailRegExp.hasMatch(email)) {
-      setState(() => _authError = 'Please enter a valid email address (e.g. name@domain.com).');
+      setState(() => _authError = 'Please enter a valid email address.');
       return;
     }
 
@@ -105,20 +109,13 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
     }
   }
 
-  // Login Handler with Email Validation
   Future<void> _handleLogin() async {
     setState(() => _authError = null);
-
     final email = _loginEmailController.text.trim();
     final password = _loginPasswordController.text;
 
     if (email.isEmpty || password.isEmpty) {
       setState(() => _authError = 'Please provide both email and password.');
-      return;
-    }
-
-    if (!_emailRegExp.hasMatch(email)) {
-      setState(() => _authError = 'Please enter a valid email address.');
       return;
     }
 
@@ -131,6 +128,28 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
       final error = ref.read(authProvider).errorMessage;
       setState(() => _authError = error ?? 'Invalid credentials.');
     }
+  }
+
+  void _showTermsDialog() {
+    showDialog(
+      context: context,
+      builder: (context) => AlertDialog(
+        backgroundColor: const Color(0xFF262626),
+        title: const Text('Privacy Statement & Terms', style: TextStyle(color: Colors.white)),
+        content: const SingleChildScrollView(
+          child: Text(
+            'HomeCare is committed to protecting user health data and privacy in accordance with PDPA guidelines. By using this service, you consent to secure data storage and authorized sharing among your selected care network.',
+            style: TextStyle(color: Color(0xFFA3A3A3)),
+          ),
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(context), 
+            child: const Text('CLOSE', style: TextStyle(color: Color(0xFF60A5FA)))
+          )
+        ],
+      ),
+    );
   }
 
   @override
@@ -152,9 +171,9 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
                     width: 72,
                     height: 72,
                     decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withValues(alpha: 0.2),
+                      color: const Color(0xFFEF4444).withOpacity(0.2),
                       borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
                     ),
                     child: const Icon(Icons.favorite, color: Color(0xFFEF4444), size: 38),
                   ),
@@ -179,13 +198,14 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
                     ),
                   ),
                   const SizedBox(height: 24),
+
                   if (_authError != null) ...[
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withValues(alpha: 0.15),
+                        color: const Color(0xFFEF4444).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFEF4444).withValues(alpha: 0.3)),
+                        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
@@ -202,13 +222,14 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
                     ),
                     const SizedBox(height: 16),
                   ],
+
                   if (_regSuccessMsg != null) ...[
                     Container(
                       padding: const EdgeInsets.all(14),
                       decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withValues(alpha: 0.15),
+                        color: const Color(0xFF10B981).withOpacity(0.15),
                         borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                       ),
                       child: Row(
                         children: [
@@ -225,6 +246,7 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
                     ),
                     const SizedBox(height: 16),
                   ],
+
                   AnimatedSwitcher(
                     duration: const Duration(milliseconds: 300),
                     child: _buildCurrentStep(authState.isLoading),
@@ -240,14 +262,10 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
 
   Widget _buildCurrentStep(bool isLoading) {
     switch (_step) {
-      case 'role':
-        return _buildRoleStep();
-      case 'register':
-        return _buildRegisterStep(isLoading);
-      case 'login':
-        return _buildLoginStep(isLoading);
-      default:
-        return _buildRoleStep();
+      case 'role': return _buildRoleStep();
+      case 'register': return _buildRegisterStep(isLoading);
+      case 'login': return _buildLoginStep(isLoading);
+      default: return _buildRoleStep();
     }
   }
 
@@ -329,7 +347,7 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
               width: 48,
               height: 48,
               decoration: BoxDecoration(
-                color: color.withValues(alpha: 0.2),
+                color: color.withOpacity(0.2),
                 borderRadius: BorderRadius.circular(16),
               ),
               alignment: Alignment.center,
@@ -382,9 +400,9 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withValues(alpha: 0.2),
+                  color: const Color(0xFF3B82F6).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF3B82F6).withValues(alpha: 0.3)),
+                  border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
                 ),
                 child: Text(
                   'ROLE: ${_selectedRole.name.toUpperCase()}',
@@ -440,11 +458,45 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
             hint: 'Re-enter password',
             obscureText: !_showRegPassword,
           ),
-          const SizedBox(height: 20),
+          const SizedBox(height: 12),
+          
+          // FIX 3: PRIVACY & TERMS CHECKBOX
+          Row(
+            crossAxisAlignment: CrossAxisAlignment.center,
+            children: [
+              Checkbox(
+                value: _acceptedTerms,
+                onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
+                activeColor: const Color(0xFF2563EB),
+                side: const BorderSide(color: Color(0xFF737373)),
+              ),
+              Expanded(
+                child: GestureDetector(
+                  onTap: _showTermsDialog,
+                  child: const Text.rich(
+                    TextSpan(
+                      text: 'By creating an account, you agree to our ',
+                      style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 11),
+                      children: [
+                        TextSpan(
+                          text: 'Privacy Statement and Terms',
+                          style: TextStyle(color: Color(0xFF60A5FA), fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
+                        ),
+                        TextSpan(text: '.'),
+                      ],
+                    ),
+                  ),
+                ),
+              ),
+            ],
+          ),
+
+          const SizedBox(height: 16),
           ElevatedButton(
-            onPressed: isLoading ? null : _handleRegister,
+            onPressed: isLoading || !_acceptedTerms ? null : _handleRegister,
             style: ElevatedButton.styleFrom(
               backgroundColor: const Color(0xFF2563EB),
+              disabledBackgroundColor: const Color(0xFF333333),
               padding: const EdgeInsets.symmetric(vertical: 16),
             ),
             child: isLoading
@@ -452,7 +504,7 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
                 : const Row(
                     mainAxisAlignment: MainAxisAlignment.center,
                     children: [
-                      Text('PROCEED TO LOGIN', style: TextStyle(fontWeight: FontWeight.w900)),
+                      Text('CREATE ACCOUNT', style: TextStyle(fontWeight: FontWeight.w900)),
                       SizedBox(width: 8),
                       Icon(Icons.arrow_forward, size: 18),
                     ],
@@ -507,9 +559,9 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
               Container(
                 padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
                 decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withValues(alpha: 0.2),
+                  color: const Color(0xFF10B981).withOpacity(0.2),
                   borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF10B981).withValues(alpha: 0.3)),
+                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
                 ),
                 child: const Text(
                   'ACCOUNT LOGIN',

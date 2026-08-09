@@ -6,7 +6,9 @@ import 'dart:convert';
 import '../../auth/providers/auth_provider.dart';
 
 class AccountSettingsView extends ConsumerStatefulWidget {
-  const AccountSettingsView({super.key});
+  final VoidCallback onBack;
+
+  const AccountSettingsView({super.key, required this.onBack});
 
   @override
   ConsumerState<AccountSettingsView> createState() => _AccountSettingsViewState();
@@ -24,6 +26,10 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
   @override
   void initState() {
     super.initState();
+    _resetToCurrentData();
+  }
+
+  void _resetToCurrentData() {
     final user = ref.read(authProvider).user;
     _nameController = TextEditingController(text: user?.name ?? '');
     _phoneController = TextEditingController(text: user?.phoneNumber ?? '');
@@ -40,9 +46,16 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
     super.dispose();
   }
 
+  void _cancelEdit() {
+    setState(() {
+      _isEditing = false;
+    });
+    _resetToCurrentData(); // Revert any unsaved typing
+  }
+
   Future<void> _pickImage() async {
     if (!_isEditing) return;
-    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 50);
+    final XFile? image = await _picker.pickImage(source: ImageSource.gallery, imageQuality: 30);
     if (image != null) {
       final bytes = await image.readAsBytes();
       setState(() {
@@ -112,15 +125,17 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
+        leading: IconButton(
+          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
+          onPressed: widget.onBack, 
+        ),
         title: const Text('Account Settings', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900)),
         backgroundColor: Colors.white,
         elevation: 0,
-        iconTheme: const IconThemeData(color: Color(0xFF0F172A)),
       ),
       body: ListView(
         padding: const EdgeInsets.all(20),
         children: [
-          // Profile Photo Avatar
           Center(
             child: Stack(
               children: [
@@ -183,49 +198,78 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
             onChanged: _isEditing ? (val) => setState(() => _selectedGender = val!) : null,
           ),
           const SizedBox(height: 24),
-          ListTile(
-            tileColor: Colors.white,
-            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
-            leading: const Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
-            title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
-            trailing: const Icon(Icons.chevron_right),
-            onTap: _showChangePasswordModal,
-          ),
-          const SizedBox(height: 32),
-          SizedBox(
-            width: double.infinity,
-            child: ElevatedButton(
-              onPressed: isLoading
-                  ? null
-                  : () async {
-                      if (!_isEditing) {
-                        setState(() => _isEditing = true);
-                        return;
-                      }
-                      final success = await ref.read(authProvider.notifier).updateProfile(
-                        name: _nameController.text.trim(),
-                        phoneNumber: _phoneController.text.trim(),
-                        gender: _selectedGender,
-                        profilePhotoUrl: _profilePhotoUrl,
-                      );
-                      if (success && mounted) {
-                        setState(() => _isEditing = false);
-                        ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved successfully!'), backgroundColor: Color(0xFF10B981)));
-                      }
-                    },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: _isEditing ? const Color(0xFF22C55E) : const Color(0xFF2563EB),
-                padding: const EdgeInsets.symmetric(vertical: 18),
-                shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
-              ),
-              child: isLoading
-                  ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                  : Text(
-                      _isEditing ? 'SAVE CHANGES' : 'EDIT PROFILE',
-                      style: const TextStyle(fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8),
-                    ),
+          
+          if (!_isEditing) ...[
+            ListTile(
+              tileColor: Colors.white,
+              shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
+              leading: const Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
+              title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
+              trailing: const Icon(Icons.chevron_right),
+              onTap: _showChangePasswordModal,
             ),
-          ),
+            const SizedBox(height: 12),
+          ],
+          
+          const SizedBox(height: 32),
+          
+          // --- UPDATED ACTION BUTTONS: CANCEL & SAVE ---
+          if (_isEditing)
+            Row(
+              children: [
+                Expanded(
+                  child: OutlinedButton(
+                    onPressed: isLoading ? null : _cancelEdit,
+                    style: OutlinedButton.styleFrom(
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      side: const BorderSide(color: Color(0xFFEF4444), width: 2),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    child: const Text('CANCEL', style: TextStyle(fontWeight: FontWeight.w900, color: Color(0xFFEF4444))),
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: isLoading
+                        ? null
+                        : () async {
+                            final success = await ref.read(authProvider.notifier).updateProfile(
+                              name: _nameController.text.trim(),
+                              phoneNumber: _phoneController.text.trim(),
+                              gender: _selectedGender,
+                              profilePhotoUrl: _profilePhotoUrl,
+                            );
+                            if (success && mounted) {
+                              setState(() => _isEditing = false);
+                              ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Profile saved successfully!'), backgroundColor: Color(0xFF10B981)));
+                            }
+                          },
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF22C55E),
+                      padding: const EdgeInsets.symmetric(vertical: 18),
+                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                    ),
+                    child: isLoading
+                        ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
+                        : const Text('SAVE', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white)),
+                  ),
+                ),
+              ],
+            )
+          else
+            SizedBox(
+              width: double.infinity,
+              child: ElevatedButton(
+                onPressed: () => setState(() => _isEditing = true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: const Color(0xFF2563EB),
+                  padding: const EdgeInsets.symmetric(vertical: 18),
+                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
+                ),
+                child: const Text('EDIT PROFILE', style: TextStyle(fontWeight: FontWeight.w900, color: Colors.white, letterSpacing: 0.8)),
+              ),
+            ),
         ],
       ),
     );
