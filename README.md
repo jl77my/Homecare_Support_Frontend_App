@@ -1,16 +1,37 @@
-# homecare_app
+# HomeCare Flutter App
 
-A new Flutter project.
+This project includes the caregiver/family HomeCare Agent interface and personalized health-prediction cards. The Gemini key is intentionally not stored in Flutter; all AI, prediction and database operations go through the authenticated Node.js backend.
 
-## Getting Started
+## Run locally
 
-This project is a starting point for a Flutter application.
+```bash
+flutter pub get
 
-A few resources to get you started if this is your first Flutter project:
+# Web/Windows, with backend on the same computer
+flutter run -d chrome --dart-define=API_BASE_URL=http://localhost:3000/api
 
-- [Lab: Write your first Flutter app](https://docs.flutter.dev/get-started/codelab)
-- [Cookbook: Useful Flutter samples](https://docs.flutter.dev/cookbook)
+# Android emulator
+flutter run --dart-define=API_BASE_URL=http://10.0.2.2:3000/api
 
-For help getting started with Flutter development, view the
-[online documentation](https://docs.flutter.dev/), which offers tutorials,
-samples, guidance on mobile development, and a full API reference.
+# Physical phone: replace the address with your backend computer's LAN IPv4
+flutter run --dart-define=API_BASE_URL=http://192.168.1.100:3000/api
+```
+
+## Agent behavior
+
+- The Care Agent floating button appears only for caregiver and family roles.
+- Each conversation is isolated by the selected elderly ID.
+- The agent can answer from live medication, mood, task, health and report records.
+- The caregiver and family dashboards show personalized anomaly, risk and trend results after health records load.
+- The agent can explain the same health prediction because it is included in the backend RAG context.
+- Requested writes are displayed as a preview and require Confirm.
+- Cancel performs no database write.
+- Confirmed records automatically refresh the existing Tasks, Reminders or Reports screen.
+
+Run Flutter tests with:
+
+```bash
+flutter test
+```
+
+See the backend `README.md` for database migration, environment variables, Postman requests, full acceptance tests and troubleshooting.

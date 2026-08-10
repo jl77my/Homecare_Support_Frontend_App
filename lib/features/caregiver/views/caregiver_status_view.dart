@@ -3,6 +3,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
+import '../../../core/widgets/health_prediction_card.dart';
 import '../providers/caregiver_provider.dart';
 import '../widgets/patient_selector_bar.dart';
 import 'pairing_view.dart';
@@ -259,7 +260,8 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
             ),
           ),
           const SizedBox(height: 20),
-          
+          HealthPredictionCard(prediction: caregiverState.healthPrediction),
+          const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(24),
             decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(36), boxShadow: const [BoxShadow(color: Color(0x25000000), blurRadius: 20, offset: Offset(0, 10))]),

@@ -7,6 +7,7 @@ import '../services/family_service.dart';
 class FamilyDashboardState {
   final List<CareTask> tasks;
   final HealthVitals? latestVital;
+  final HealthPrediction? healthPrediction;
   final CareReport? latestReport;
   final List<CareReport> reports;
   final ChatMessage? latestMessage;
@@ -24,6 +25,7 @@ class FamilyDashboardState {
   const FamilyDashboardState({
     this.tasks = const [],
     this.latestVital,
+    this.healthPrediction,
     this.latestReport,
     this.reports = const [],
     this.latestMessage,
@@ -42,6 +44,7 @@ class FamilyDashboardState {
   FamilyDashboardState copyWith({
     List<CareTask>? tasks,
     HealthVitals? latestVital,
+    HealthPrediction? healthPrediction,
     CareReport? latestReport,
     List<CareReport>? reports,
     ChatMessage? latestMessage,
@@ -60,6 +63,7 @@ class FamilyDashboardState {
     return FamilyDashboardState(
       tasks: tasks ?? this.tasks,
       latestVital: latestVital ?? this.latestVital,
+      healthPrediction: healthPrediction ?? this.healthPrediction,
       latestReport: latestReport ?? this.latestReport,
       reports: reports ?? this.reports,
       latestMessage: latestMessage ?? this.latestMessage,
@@ -290,6 +294,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
       final rawReports = await _service.getCareReports(token, elderlyId);
       final parsedReports = rawReports.map((r) => CareReport.fromJson(r)).toList();
       final healthRecords = await _service.getHealthRecords(token, elderlyId);
+      final healthPrediction = await _service.getHealthPrediction(token, elderlyId);
       final chatMsgs = await _service.getChatMessages(token: token, elderlyId: elderlyId);
       final fetchedMood = await _service.getElderlyMoods(token, elderlyId); 
       
@@ -301,6 +306,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
       
       state = state.copyWith(
         latestVital: latestVital,
+        healthPrediction: healthPrediction,
         latestReport: latestReport,
         reports: parsedReports,
         latestMessage: latestMessage,

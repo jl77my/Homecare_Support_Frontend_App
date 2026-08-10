@@ -85,26 +85,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
 
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
-      appBar: AppBar(
-        title: const Text(
-          'HomeCare Senior',
-          style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900),
-        ),
-        backgroundColor: Colors.white,
-        elevation: 0,
-        actions: [
-          IconButton(
-            icon: const Icon(Icons.account_circle, size: 30, color: Color(0xFF2563EB)),
-            tooltip: 'View Profile',
-            onPressed: () {
-              Navigator.of(context).push(
-                MaterialPageRoute(builder: (context) => const ProfileView()),
-              );
-            },
-          ),
-          const SizedBox(width: 8),
-        ],
-      ),
+      
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : state.isLinked == false

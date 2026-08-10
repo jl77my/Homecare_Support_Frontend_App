@@ -2,6 +2,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import 'package:intl/intl.dart';
+import '../../../core/widgets/health_prediction_card.dart';
 import '../providers/family_provider.dart';
 import 'family_pairing_view.dart';
 
@@ -302,6 +303,8 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
             ],
           ),
         ),
+        const SizedBox(height: 20),
+        HealthPredictionCard(prediction: familyState.healthPrediction),
         const SizedBox(height: 20),
         if (latestReport != null)
           Container(

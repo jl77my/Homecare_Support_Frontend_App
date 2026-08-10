@@ -10,6 +10,7 @@ import '../services/caregiver_service.dart';
 class CaregiverState {
   final List<CareTask> tasks;
   final List<HealthVitals> vitals;
+  final HealthPrediction? healthPrediction;
   final List<CareReport> reports;
   final List<Map<String, String>> assignedSeniors;
   final List<ChatMessage> currentChatMessages;
@@ -25,6 +26,7 @@ class CaregiverState {
   const CaregiverState({
     this.tasks = const [],
     this.vitals = const [],
+    this.healthPrediction,
     this.reports = const [],
     this.assignedSeniors = const [],
     this.currentChatMessages = const [],
@@ -41,6 +43,7 @@ class CaregiverState {
   CaregiverState copyWith({
     List<CareTask>? tasks,
     List<HealthVitals>? vitals,
+    HealthPrediction? healthPrediction,
     List<CareReport>? reports,
     List<Map<String, String>>? assignedSeniors,
     List<ChatMessage>? currentChatMessages,
@@ -58,6 +61,7 @@ class CaregiverState {
     return CaregiverState(
       tasks: tasks ?? this.tasks,
       vitals: vitals ?? this.vitals,
+      healthPrediction: healthPrediction ?? this.healthPrediction,
       reports: reports ?? this.reports,
       assignedSeniors: assignedSeniors ?? this.assignedSeniors,
       currentChatMessages: currentChatMessages ?? this.currentChatMessages,
@@ -184,9 +188,14 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     final token = _token;
     if (token == null) return;
     try {
-      final rawRecords = await _service.getHealthRecords(token: token, patientId: elderlyId);
+      final results = await Future.wait([
+        _service.getHealthRecords(token: token, patientId: elderlyId),
+        _service.getHealthPrediction(token: token, patientId: elderlyId),
+      ]);
+      final rawRecords = results[0] as List<dynamic>;
+      final prediction = results[1] as HealthPrediction;
       final parsedVitals = rawRecords.map((json) => HealthVitals.fromJson(json)).toList();
-      state = state.copyWith(vitals: parsedVitals);
+      state = state.copyWith(vitals: parsedVitals, healthPrediction: prediction);
     } catch (e) {
       _handleException(e);
     }

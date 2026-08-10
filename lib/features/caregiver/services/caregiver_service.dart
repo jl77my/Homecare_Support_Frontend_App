@@ -103,6 +103,18 @@ class CaregiverService {
     return data['records'] as List<dynamic>? ?? [];
   }
 
+  Future<HealthPrediction> getHealthPrediction({
+    required String token,
+    required String patientId,
+  }) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/caregiver/health/$patientId/prediction'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    return HealthPrediction.fromJson(data['prediction'] as Map<String, dynamic>);
+  }
+
   Future<List<dynamic>> getCareReports({
     required String token,
     required String patientId,

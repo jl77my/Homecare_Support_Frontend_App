@@ -17,6 +17,7 @@ import 'features/caregiver/views/tasks_view.dart';
 import 'features/elderly/views/elderly_home_view.dart';
 import 'features/elderly/views/reminders_view.dart';
 import 'features/family/views/family_dashboard_view.dart';
+import 'features/agent/views/agent_chat_view.dart';
 
 void main() {
   runApp(
@@ -130,6 +131,13 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                   const GlobalReminderOverlay(),
                 ],
               ),
+              floatingActionButton: user.role.toLowerCase() != 'elderly' && _activeTab != 'agent'
+                  ? FloatingActionButton.extended(
+                      onPressed: () => _setActiveTab('agent'),
+                      icon: const Icon(Icons.smart_toy_outlined),
+                      label: const Text('Care Agent'),
+                    )
+                  : null,
               bottomNavigationBar: user.role.toLowerCase() == 'elderly'
                   ? null
                   : CustomBottomNavigationBar(
@@ -158,6 +166,8 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
         return const TasksView();
       case 'chat':
         return const ChatView();
+      case 'agent':
+        return const AgentChatView();
       case 'profile':
         return ProfileView(
           onNavigateToAccountSettings: () => _setActiveTab('account_settings'),

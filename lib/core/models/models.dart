@@ -195,6 +195,97 @@ class HealthVitals {
   }
 }
 
+class HealthMetricPrediction {
+  final String key;
+  final String label;
+  final double latest;
+  final String unit;
+  final double baselineMean;
+  final double deviationFromBaseline;
+  final String trend;
+  final double nextReadingEstimate;
+  final bool abnormal;
+
+  const HealthMetricPrediction({
+    required this.key,
+    required this.label,
+    required this.latest,
+    required this.unit,
+    required this.baselineMean,
+    required this.deviationFromBaseline,
+    required this.trend,
+    required this.nextReadingEstimate,
+    required this.abnormal,
+  });
+
+  factory HealthMetricPrediction.fromJson(Map<String, dynamic> json) {
+    double number(dynamic value) => double.tryParse(value?.toString() ?? '') ?? 0;
+    return HealthMetricPrediction(
+      key: json['key']?.toString() ?? '',
+      label: json['label']?.toString() ?? '',
+      latest: number(json['latest']),
+      unit: json['unit']?.toString() ?? '',
+      baselineMean: number(json['baselineMean']),
+      deviationFromBaseline: number(json['deviationFromBaseline']),
+      trend: json['trend']?.toString() ?? 'stable',
+      nextReadingEstimate: number(json['nextReadingEstimate']),
+      abnormal: json['abnormal'] == true,
+    );
+  }
+}
+
+class HealthPrediction {
+  final bool modelReady;
+  final int minimumRecords;
+  final int recordsAnalyzed;
+  final String riskLevel;
+  final int riskScore;
+  final int? stabilityScore;
+  final bool isAnomaly;
+  final String summary;
+  final List<String> clinicalAlerts;
+  final List<String> recommendations;
+  final List<HealthMetricPrediction> metrics;
+  final String disclaimer;
+
+  const HealthPrediction({
+    required this.modelReady,
+    required this.minimumRecords,
+    required this.recordsAnalyzed,
+    required this.riskLevel,
+    required this.riskScore,
+    this.stabilityScore,
+    required this.isAnomaly,
+    required this.summary,
+    required this.clinicalAlerts,
+    required this.recommendations,
+    required this.metrics,
+    required this.disclaimer,
+  });
+
+  factory HealthPrediction.fromJson(Map<String, dynamic> json) {
+    final modelInfo = json['modelInfo'] as Map<String, dynamic>? ?? const {};
+    int integer(dynamic value) => int.tryParse(value?.toString() ?? '') ?? 0;
+    return HealthPrediction(
+      modelReady: modelInfo['modelReady'] == true,
+      minimumRecords: integer(modelInfo['minimumRecords']),
+      recordsAnalyzed: integer(modelInfo['recordsAnalyzed']),
+      riskLevel: json['riskLevel']?.toString() ?? 'insufficient_data',
+      riskScore: integer(json['riskScore']),
+      stabilityScore: json['stabilityScore'] == null ? null : integer(json['stabilityScore']),
+      isAnomaly: json['isAnomaly'] == true,
+      summary: json['summary']?.toString() ?? '',
+      clinicalAlerts: (json['clinicalAlerts'] as List<dynamic>? ?? const []).map((item) => item.toString()).toList(),
+      recommendations: (json['recommendations'] as List<dynamic>? ?? const []).map((item) => item.toString()).toList(),
+      metrics: (json['metrics'] as List<dynamic>? ?? const [])
+          .whereType<Map<String, dynamic>>()
+          .map(HealthMetricPrediction.fromJson)
+          .toList(),
+      disclaimer: json['disclaimer']?.toString() ?? 'This screening result is not a medical diagnosis.',
+    );
+  }
+}
+
 class CareAcknowledgement {
   final String id;
   final String familyName;
