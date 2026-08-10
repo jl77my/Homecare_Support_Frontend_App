@@ -10,6 +10,7 @@ import 'pairing_view.dart';
 class CaregiverStatusView extends ConsumerStatefulWidget {
   final VoidCallback onNavigateToReports;
   final String elderlyId;
+
   const CaregiverStatusView({
     super.key,
     required this.onNavigateToReports,
@@ -39,15 +40,27 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
     super.dispose();
   }
 
+  Future<void> _handleRefresh() async {
+    final activeId = ref.read(caregiverProvider).activeElderlyId;
+    if (activeId.isNotEmpty) {
+      await ref.read(caregiverProvider.notifier).fetchHealthRecords(activeId);
+    } else {
+      await ref.read(caregiverProvider.notifier).fetchAssignedSeniors();
+    }
+  }
+
   Future<void> _saveVitals() async {
     final hrStr = _heartRateController.text.trim();
     final bp = _bpController.text.trim();
     final glucoseStr = _glucoseController.text.trim();
+
     if (hrStr.isEmpty || bp.isEmpty) {
       ScaffoldMessenger.of(context).showSnackBar(const SnackBar(content: Text('Please enter Heart Rate and Blood Pressure.')));
       return;
     }
+
     final activeId = ref.read(caregiverProvider).activeElderlyId;
+
     final success = await ref.read(caregiverProvider.notifier).recordHealth(
       patientId: activeId.isEmpty ? widget.elderlyId : activeId, 
       heartRate: hrStr,
@@ -55,6 +68,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
       bloodSugar: glucoseStr.isEmpty ? '120' : glucoseStr,
       notes: 'Routine health entry',
     );
+
     if (success && mounted) {
       _heartRateController.clear();
       _bpController.clear();
@@ -128,184 +142,189 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
       );
     }
 
-    return ListView(
-      padding: const EdgeInsets.only(bottom: 32),
-      children: [
-        PatientSelectorBar(
-          assignedSeniors: assignedSeniors, 
-          selectedElderlyId: caregiverState.activeElderlyId,
-          onElderlySelected: (newElderlyId) {
-            ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
-          },
-          onPairNewElderly: () {
-            Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PairingView()));
-          },
-        ),
-        
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(
-            color: Colors.white,
-            borderRadius: BorderRadius.circular(32),
-            border: Border.all(color: const Color(0xFFF1F5F9)),
-            boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4))],
+    return RefreshIndicator(
+      onRefresh: _handleRefresh,
+      color: const Color(0xFF2563EB),
+      child: ListView(
+        physics: const AlwaysScrollableScrollPhysics(),
+        padding: const EdgeInsets.only(bottom: 32),
+        children: [
+          PatientSelectorBar(
+            assignedSeniors: assignedSeniors, 
+            selectedElderlyId: caregiverState.activeElderlyId,
+            onElderlySelected: (newElderlyId) {
+              ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
+            },
+            onPairNewElderly: () {
+              Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PairingView()));
+            },
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        const Text(
-                          'Active Monitoring',
-                          style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                        ),
-                        if (latest != null)
-                          Padding(
-                            padding: const EdgeInsets.only(top: 2.0),
-                            child: Text(
-                              'Last updated: ${DateFormat('MMM d, hh:mm a').format(latest.timestamp)}',
-                              style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
-                            ),
-                          ),
-                      ],
-                    ),
-                  ),
-                  Container(
-                    padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                    decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(12)),
-                    child: const Text('LIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF15803D))),
-                  ),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.favorite, size: 14, color: Color(0xFF94A3B8)),
-                              SizedBox(width: 4),
-                              Text('HEART RATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Row(
-                            crossAxisAlignment: CrossAxisAlignment.baseline,
-                            textBaseline: TextBaseline.alphabetic,
-                            children: [
-                              Text(heartRateDisplay, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                              const SizedBox(width: 4),
-                              const Text('BPM', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                            ],
-                          ),
-                        ],
-                      ),
-                    ),
-                  ),
-                  const SizedBox(width: 12),
-                  Expanded(
-                    child: Container(
-                      padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Row(
-                            children: [
-                              Icon(Icons.show_chart, size: 14, color: Color(0xFF94A3B8)),
-                              SizedBox(width: 4),
-                              Text('BLOOD PRESSURE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
-                            ],
-                          ),
-                          const SizedBox(height: 6),
-                          Text(bpDisplay, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                        ],
-                      ),
-                    ),
-                  ),
-                ],
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        
-        Container(
-          padding: const EdgeInsets.all(24),
-          decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(36), boxShadow: const [BoxShadow(color: Color(0x25000000), blurRadius: 20, offset: Offset(0, 10))]),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              const Row(
-                children: [
-                  Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
-                  SizedBox(width: 8),
-                  Text('Log New Vitals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
-                ],
-              ),
-              const SizedBox(height: 16),
-              Row(
-                children: [
-                  Expanded(child: _buildVitalsInputField(controller: _heartRateController, label: 'HEART RATE', hint: '72', keyboardType: TextInputType.number)),
-                  const SizedBox(width: 12),
-                  Expanded(child: _buildVitalsInputField(controller: _bpController, label: 'PRESSURE', hint: '120/80')),
-                ],
-              ),
-              const SizedBox(height: 12),
-              _buildVitalsInputField(controller: _glucoseController, label: 'GLUCOSE LEVEL (OPTIONAL)', hint: '95', keyboardType: TextInputType.number),
-              const SizedBox(height: 20),
-              SizedBox(
-                width: double.infinity,
-                child: ElevatedButton.icon(
-                  onPressed: caregiverState.isLoading ? null : _saveVitals,
-                  icon: caregiverState.isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.check, size: 20),
-                  label: const Text('SUBMIT RECORDS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                  style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
-                ),
-              ),
-            ],
-          ),
-        ),
-        const SizedBox(height: 20),
-        
-        Container(
-          padding: const EdgeInsets.all(20),
-          decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32), border: Border.all(color: const Color(0xFFF1F5F9))),
-          child: Row(
-            children: [
-              Container(
-                padding: const EdgeInsets.all(12),
-                decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(16)),
-                child: const Icon(Icons.file_present_rounded, color: Color(0xFF2563EB), size: 26),
-              ),
-              const SizedBox(width: 14),
-              Expanded(
-                child: Column(
+          
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: Colors.white,
+              borderRadius: BorderRadius.circular(32),
+              border: Border.all(color: const Color(0xFFF1F5F9)),
+              boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4))],
+            ),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text('Care Reports & Photo Logs', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                    const SizedBox(height: 2),
-                    const Text('Write new report with photo attachments', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+                    Expanded(
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          const Text(
+                            'Active Monitoring',
+                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                          ),
+                          if (latest != null)
+                            Padding(
+                              padding: const EdgeInsets.only(top: 2.0),
+                              child: Text(
+                                'Last updated: ${DateFormat('MMM d, hh:mm a').format(latest.timestamp)}',
+                                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                        ],
+                      ),
+                    ),
+                    Container(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
+                      decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(12)),
+                      child: const Text('LIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF15803D))),
+                    ),
                   ],
                 ),
-              ),
-              IconButton(onPressed: widget.onNavigateToReports, icon: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8))),
-            ],
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.favorite, size: 14, color: Color(0xFF94A3B8)),
+                                SizedBox(width: 4),
+                                Text('HEART RATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Row(
+                              crossAxisAlignment: CrossAxisAlignment.baseline,
+                              textBaseline: TextBaseline.alphabetic,
+                              children: [
+                                Text(heartRateDisplay, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                                const SizedBox(width: 4),
+                                const Text('BPM', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
+                              ],
+                            ),
+                          ],
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: Container(
+                        padding: const EdgeInsets.all(16),
+                        decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Row(
+                              children: [
+                                Icon(Icons.show_chart, size: 14, color: Color(0xFF94A3B8)),
+                                SizedBox(width: 4),
+                                Text('BLOOD PRESSURE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
+                              ],
+                            ),
+                            const SizedBox(height: 6),
+                            Text(bpDisplay, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                          ],
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ],
+            ),
           ),
-        ),
-      ],
+          const SizedBox(height: 20),
+          
+          Container(
+            padding: const EdgeInsets.all(24),
+            decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(36), boxShadow: const [BoxShadow(color: Color(0x25000000), blurRadius: 20, offset: Offset(0, 10))]),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Row(
+                  children: [
+                    Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
+                    SizedBox(width: 8),
+                    Text('Log New Vitals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                  ],
+                ),
+                const SizedBox(height: 16),
+                Row(
+                  children: [
+                    Expanded(child: _buildVitalsInputField(controller: _heartRateController, label: 'HEART RATE', hint: '72', keyboardType: TextInputType.number)),
+                    const SizedBox(width: 12),
+                    Expanded(child: _buildVitalsInputField(controller: _bpController, label: 'PRESSURE', hint: '120/80')),
+                  ],
+                ),
+                const SizedBox(height: 12),
+                _buildVitalsInputField(controller: _glucoseController, label: 'GLUCOSE LEVEL (OPTIONAL)', hint: '95', keyboardType: TextInputType.number),
+                const SizedBox(height: 20),
+                SizedBox(
+                  width: double.infinity,
+                  child: ElevatedButton.icon(
+                    onPressed: caregiverState.isLoading ? null : _saveVitals,
+                    icon: caregiverState.isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.check, size: 20),
+                    label: const Text('SUBMIT RECORDS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(32), border: Border.all(color: const Color(0xFFF1F5F9))),
+            child: Row(
+              children: [
+                Container(
+                  padding: const EdgeInsets.all(12),
+                  decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(16)),
+                  child: const Icon(Icons.file_present_rounded, color: Color(0xFF2563EB), size: 26),
+                ),
+                const SizedBox(width: 14),
+                Expanded(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      const Text('Care Reports & Photo Logs', style: TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
+                      const SizedBox(height: 2),
+                      const Text('Write new report with photo attachments', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w500, color: Color(0xFF64748B))),
+                    ],
+                  ),
+                ),
+                IconButton(onPressed: widget.onNavigateToReports, icon: const Icon(Icons.arrow_forward_ios, size: 16, color: Color(0xFF94A3B8))),
+              ],
+            ),
+          ),
+        ],
+      ),
     );
   }
 

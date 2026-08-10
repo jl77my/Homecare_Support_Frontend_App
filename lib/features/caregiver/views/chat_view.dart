@@ -36,6 +36,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
     else return DateFormat('MMM d, yyyy').format(messageDate);
   }
 
+  Future<void> _refreshChannels() async {
+    final authState = ref.read(authProvider);
+    final isFamily = authState.user?.role.toLowerCase() == 'family';
+    
+    if (isFamily) {
+      await ref.read(familyDashboardProvider.notifier).fetchLinkedSeniors();
+    } else {
+      await ref.read(caregiverProvider.notifier).fetchAssignedSeniors();
+    }
+  }
+
   @override
   Widget build(BuildContext context) {
     final authState = ref.watch(authProvider);
@@ -56,7 +67,6 @@ class _ChatViewState extends ConsumerState<ChatView> {
       final aTimeStr = a['latestMessageTime'] ?? '';
       final bTimeStr = b['latestMessageTime'] ?? '';
       
-      // Ensures accurate ISO parsing even if the server drops the 'T'
       final aTime = aTimeStr.isNotEmpty ? DateTime.tryParse(aTimeStr.replaceFirst(' ', 'T')) ?? DateTime(2000) : DateTime(2000);
       final bTime = bTimeStr.isNotEmpty ? DateTime.tryParse(bTimeStr.replaceFirst(' ', 'T')) ?? DateTime(2000) : DateTime(2000);
       
@@ -105,7 +115,11 @@ class _ChatViewState extends ConsumerState<ChatView> {
             )
           else
             Expanded(
+              child: RefreshIndicator(
+                onRefresh: _refreshChannels,
+                color: const Color(0xFF2563EB),
                 child: ListView.separated(
+                  physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: channelsList.length,
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
@@ -186,6 +200,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   },
                 ),
               ),
+            ),
         ],
       );
     }

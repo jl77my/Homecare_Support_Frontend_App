@@ -1,4 +1,6 @@
 // lib/features/auth/models/user_model.dart
+import '../../../core/models/enums.dart';
+
 class UserModel {
   final String id;
   final String name;
@@ -49,6 +51,20 @@ class UserModel {
           ? DateTime.tryParse(json['DatetimeUpdated'])
           : null,
     );
+  }
+
+  // Necessary for saving session to SharedPreferences
+  Map<String, dynamic> toJson() {
+    return {
+      'Id': id,
+      'Name': name,
+      'Email': email,
+      'Role': role,
+      'token': token,
+      'PhoneNumber': phoneNumber,
+      'Gender': gender,
+      'ProfilePhotoUrl': profilePhotoUrl,
+    };
   }
 
   UserModel copyWith({

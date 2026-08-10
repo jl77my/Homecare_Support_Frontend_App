@@ -19,20 +19,21 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
   @override
   void initState() {
     super.initState();
-    Future.microtask(() {
-      final user = ref.read(authProvider).user;
-      if (user == null) return;
-      final role = user.role.toLowerCase();
-      
-      // Request fresh global directory fetch
-      if (role == 'elderly') {
-        ref.read(elderlyProvider.notifier).fetchCareConnections();
-      } else if (role == 'caregiver') {
-        ref.read(caregiverProvider.notifier).fetchCareConnections(); 
-      } else if (role == 'family') {
-        ref.read(familyDashboardProvider.notifier).fetchCareConnections();
-      }
-    });
+    Future.microtask(() => _fetchData());
+  }
+
+  Future<void> _fetchData() async {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+    final role = user.role.toLowerCase();
+    
+    if (role == 'elderly') {
+      await ref.read(elderlyProvider.notifier).fetchCareConnections();
+    } else if (role == 'caregiver') {
+      await ref.read(caregiverProvider.notifier).fetchCareConnections(); 
+    } else if (role == 'family') {
+      await ref.read(familyDashboardProvider.notifier).fetchCareConnections();
+    }
   }
 
   @override
@@ -48,7 +49,6 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
     List<dynamic> familyMembers = [];
     bool isLoading = false;
 
-    // Reactively watch providers directly
     if (isElderly) {
       final state = ref.watch(elderlyProvider);
       caregivers = state.activeCaregivers;
@@ -154,49 +154,54 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
       ),
       body: isLoading 
           ? const Center(child: CircularProgressIndicator())
-          : ListView(
-              padding: const EdgeInsets.all(20),
-              children: [
-                if (isElderly) ...[
-                  const Text('ASSIGNED CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-                  const SizedBox(height: 10),
-                  if (caregivers.isEmpty)
-                     const Text('No caregivers assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-                  ...caregivers.map((c) => buildConnectionCard(c, 'caregiver')),
-                  const SizedBox(height: 24),
-                  const Text('LINKED FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-                  const SizedBox(height: 10),
-                  if (familyMembers.isEmpty)
-                     const Text('No family members linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-                  ...familyMembers.map((f) => buildConnectionCard(f, 'family')),
-                ] 
-                else if (role == 'caregiver') ...[
-                  const Text('ASSIGNED SENIORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-                  const SizedBox(height: 10),
-                  if (elderlyList.isEmpty)
-                     const Text('No seniors assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-                  ...elderlyList.map((e) => buildConnectionCard(e, 'elderly')),
-                  const SizedBox(height: 24),
-                  const Text('LINKED FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-                  const SizedBox(height: 10),
-                  if (familyMembers.isEmpty)
-                     const Text('No family members linked to your assigned seniors.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-                  ...familyMembers.map((f) => buildConnectionCard(f, 'family')),
-                ]
-                else if (role == 'family') ...[
-                  const Text('LINKED SENIORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-                  const SizedBox(height: 10),
-                  if (elderlyList.isEmpty)
-                     const Text('No seniors linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-                  ...elderlyList.map((e) => buildConnectionCard(e, 'elderly')),
-                  const SizedBox(height: 24),
-                  const Text('ASSIGNED CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-                  const SizedBox(height: 10),
-                  if (caregivers.isEmpty)
-                     const Text('No caregivers assigned to your linked seniors.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-                  ...caregivers.map((c) => buildConnectionCard(c, 'caregiver')),
+          : RefreshIndicator(
+              onRefresh: _fetchData,
+              color: const Color(0xFF2563EB),
+              child: ListView(
+                physics: const AlwaysScrollableScrollPhysics(),
+                padding: const EdgeInsets.all(20),
+                children: [
+                  if (isElderly) ...[
+                    const Text('ASSIGNED CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                    const SizedBox(height: 10),
+                    if (caregivers.isEmpty)
+                       const Text('No caregivers assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                    ...caregivers.map((c) => buildConnectionCard(c, 'caregiver')),
+                    const SizedBox(height: 24),
+                    const Text('LINKED FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                    const SizedBox(height: 10),
+                    if (familyMembers.isEmpty)
+                       const Text('No family members linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                    ...familyMembers.map((f) => buildConnectionCard(f, 'family')),
+                  ] 
+                  else if (role == 'caregiver') ...[
+                    const Text('ASSIGNED SENIORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                    const SizedBox(height: 10),
+                    if (elderlyList.isEmpty)
+                       const Text('No seniors assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                    ...elderlyList.map((e) => buildConnectionCard(e, 'elderly')),
+                    const SizedBox(height: 24),
+                    const Text('LINKED FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                    const SizedBox(height: 10),
+                    if (familyMembers.isEmpty)
+                       const Text('No family members linked to your assigned seniors.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                    ...familyMembers.map((f) => buildConnectionCard(f, 'family')),
+                  ]
+                  else if (role == 'family') ...[
+                    const Text('LINKED SENIORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                    const SizedBox(height: 10),
+                    if (elderlyList.isEmpty)
+                       const Text('No seniors linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                    ...elderlyList.map((e) => buildConnectionCard(e, 'elderly')),
+                    const SizedBox(height: 24),
+                    const Text('ASSIGNED CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                    const SizedBox(height: 10),
+                    if (caregivers.isEmpty)
+                       const Text('No caregivers assigned to your linked seniors.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                    ...caregivers.map((c) => buildConnectionCard(c, 'caregiver')),
+                  ],
                 ],
-              ],
+              ),
             ),
     );
   }

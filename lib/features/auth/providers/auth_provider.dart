@@ -1,5 +1,7 @@
 // lib/features/auth/providers/auth_provider.dart
+import 'dart:convert';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'package:shared_preferences/shared_preferences.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
 
@@ -8,7 +10,7 @@ class AuthState {
   final String? token;
   final bool isLoading;
   final String? errorMessage;
-
+  
   const AuthState({
     this.user,
     this.token,
@@ -37,13 +39,44 @@ final authServiceProvider = Provider<AuthService>((ref) {
 });
 
 class AuthNotifier extends StateNotifier<AuthState> {
-  AuthNotifier(this._authService) : super(const AuthState());
+  // 5. Persistent Session Boot
+  AuthNotifier(this._authService) : super(const AuthState(isLoading: true)) {
+    _loadStoredSession();
+  }
+
   final AuthService _authService;
+
+  Future<void> _loadStoredSession() async {
+    try {
+      final prefs = await SharedPreferences.getInstance();
+      final userJson = prefs.getString('current_user');
+      final token = prefs.getString('auth_token');
+
+      if (userJson != null && token != null) {
+        final Map<String, dynamic> decodedUser = jsonDecode(userJson);
+        state = AuthState(
+          user: UserModel.fromJson(decodedUser),
+          token: token,
+          isLoading: false,
+        );
+      } else {
+        state = const AuthState(isLoading: false);
+      }
+    } catch (e) {
+      state = const AuthState(isLoading: false);
+    }
+  }
 
   Future<bool> login(String email, String password) async {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       final user = await _authService.login(email: email, password: password);
+      
+      // 5. Save session to SharedPreferences
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('auth_token', user.token ?? user.id);
+      await prefs.setString('current_user', jsonEncode(user.toJson()));
+
       state = AuthState(
         user: user,
         token: user.token ?? user.id,
@@ -101,13 +134,17 @@ class AuthNotifier extends StateNotifier<AuthState> {
         profilePhotoUrl: profilePhotoUrl,
       );
       
-      // Update local state directly so UI refreshes immediately
       final updatedUser = state.user!.copyWith(
         name: name,
         phoneNumber: phoneNumber,
         gender: gender,
         profilePhotoUrl: profilePhotoUrl,
       );
+
+      // Update persisted session
+      final prefs = await SharedPreferences.getInstance();
+      await prefs.setString('current_user', jsonEncode(updatedUser.toJson()));
+
       state = state.copyWith(user: updatedUser, isLoading: false);
       return true;
     } catch (error) {
@@ -142,7 +179,9 @@ class AuthNotifier extends StateNotifier<AuthState> {
     }
   }
 
-  void logout() {
+  Future<void> logout() async {
+    final prefs = await SharedPreferences.getInstance();
+    await prefs.clear(); // Clears persistent session
     state = const AuthState();
   }
 

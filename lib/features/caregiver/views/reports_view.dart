@@ -15,6 +15,7 @@ import 'pairing_view.dart';
 
 class ReportsView extends ConsumerStatefulWidget {
   const ReportsView({super.key});
+
   @override
   ConsumerState<ReportsView> createState() => _ReportsViewState();
 }
@@ -22,6 +23,15 @@ class ReportsView extends ConsumerStatefulWidget {
 class _ReportsViewState extends ConsumerState<ReportsView> {
   ReportCategory? _categoryFilter;
   String? _lightboxImageUrl;
+
+  Future<void> _handleRefresh(bool isFamily, String activeElderlyId) async {
+    if (activeElderlyId.isEmpty) return;
+    if (isFamily) {
+      await ref.read(familyDashboardProvider.notifier).fetchDashboardData(activeElderlyId);
+    } else {
+      await ref.read(caregiverProvider.notifier).fetchCareReports(activeElderlyId);
+    }
+  }
 
   void _showNewReportModal(String activeElderlyId, {CareReport? existingReport}) {
     if (activeElderlyId.isEmpty) {
@@ -77,6 +87,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
         ),
       );
     }
+
     String emoji = '😐';
     String label = 'OKAY';
     Color bgColor = const Color(0xFFFEFCE8);
@@ -90,12 +101,13 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
       borderColor = const Color(0xFFBBF7D0);
       textColor = const Color(0xFF166534);
     } else if (mood == 'Sad') {
-      emoji = '😫';
+      emoji = '😔';
       label = 'TIRED';
       bgColor = const Color(0xFFFEF2F2);
       borderColor = const Color(0xFFFECACA);
       textColor = const Color(0xFF991B1B);
     }
+
     return Container(
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.all(20),
@@ -128,8 +140,8 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
     final activeElderlyId = isFamily ? familyState.selectedElderlyId : caregiverState.activeElderlyId;
     final assignedSeniors = isFamily ? familyState.linkedSeniors : caregiverState.assignedSeniors;
     final reports = isFamily ? familyState.reports : caregiverState.reports;
-    final todayMood = isFamily ? familyState.todayMood : caregiverState.todayMood; 
-
+    final todayMood = isFamily ? familyState.todayMood : caregiverState.todayMood;
+    
     final filteredReports = reports.where((r) {
       if (_categoryFilter != null && r.category != _categoryFilter) return false;
       return true;
@@ -137,114 +149,120 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
 
     return Stack(
       children: [
-        ListView(
-          padding: const EdgeInsets.only(bottom: 32),
-          children: [
-            if (!isFamily && !isCaregiver) const SizedBox.shrink() else
-              PatientSelectorBar(
-                assignedSeniors: assignedSeniors,
-                selectedElderlyId: activeElderlyId,
-                onElderlySelected: (newElderlyId) {
-                  if (isFamily) {
-                    ref.read(familyDashboardProvider.notifier).switchElderlyContext(newElderlyId);
-                  } else {
-                    ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
-                  }
-                },
-                onPairNewElderly: () {
-                  Navigator.of(context).push(
-                    MaterialPageRoute(builder: (context) => isFamily ? const FamilyPairingView() : const PairingView()),
-                  );
-                },
-              ),
-            
-            _buildMoodBanner(todayMood),
-            Container(
-              padding: const EdgeInsets.all(20),
-              decoration: BoxDecoration(
-                color: Colors.white,
-                borderRadius: BorderRadius.circular(32),
-                border: Border.all(color: const Color(0xFFF1F5F9)),
-                boxShadow: const [
-                  BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4)),
-                ],
-              ),
-              child: Row(
-                mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                children: [
-                  Column(
-                    crossAxisAlignment: CrossAxisAlignment.start,
-                    children: [
-                      const Text(
-                        'Care Reports Feed',
-                        style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                      ),
-                      const SizedBox(height: 2),
-                      Text(
-                        'Detailed daily logs, photos & injury updates',
-                        style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
-                      ),
-                    ],
-                  ),
-                  if (isCaregiver)
-                    ElevatedButton.icon(
-                      onPressed: () => _showNewReportModal(activeElderlyId),
-                      icon: const Icon(Icons.add_a_photo, size: 16),
-                      label: const Text('NEW REPORT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
-                      style: ElevatedButton.styleFrom(
-                        backgroundColor: const Color(0xFF2563EB),
-                        padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
-                        shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
-                      ),
-                    ),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            SingleChildScrollView(
-              scrollDirection: Axis.horizontal,
-              child: Row(
-                children: [
-                  _buildCategoryChip('All Categories', null),
-                  const SizedBox(width: 8),
-                  _buildCategoryChip('📝 Daily Log', ReportCategory.dailyLog),
-                  const SizedBox(width: 8),
-                  _buildCategoryChip('🩹 Wound Care', ReportCategory.injuryWound),
-                  const SizedBox(width: 8),
-                  _buildCategoryChip('🍲 Meal & Food', ReportCategory.mealNutrition),
-                  const SizedBox(width: 8),
-                  _buildCategoryChip('🚶 Mobility', ReportCategory.mobilityExercise),
-                  const SizedBox(width: 8),
-                  _buildCategoryChip('⚕️ Medical', ReportCategory.medicalObservation),
-                ],
-              ),
-            ),
-            const SizedBox(height: 16),
-            if (filteredReports.isEmpty)
-              const Padding(
-                padding: EdgeInsets.symmetric(vertical: 40),
-                child: Center(
-                  child: Column(
-                    children: [
-                      Icon(Icons.assignment_turned_in_outlined, size: 54, color: Color(0xFFCBD5E1)),
-                      SizedBox(height: 10),
-                      Text('No care reports in this filter', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
-                    ],
-                  ),
+        RefreshIndicator(
+          onRefresh: () => _handleRefresh(isFamily, activeElderlyId),
+          color: const Color(0xFF2563EB),
+          child: ListView(
+            physics: const AlwaysScrollableScrollPhysics(),
+            padding: const EdgeInsets.only(bottom: 32),
+            children: [
+              if (!isFamily && !isCaregiver) const SizedBox.shrink() else
+                PatientSelectorBar(
+                  assignedSeniors: assignedSeniors,
+                  selectedElderlyId: activeElderlyId,
+                  onElderlySelected: (newElderlyId) {
+                    if (isFamily) {
+                      ref.read(familyDashboardProvider.notifier).switchElderlyContext(newElderlyId);
+                    } else {
+                      ref.read(caregiverProvider.notifier).switchElderlyContext(newElderlyId);
+                    }
+                  },
+                  onPairNewElderly: () {
+                    Navigator.of(context).push(
+                      MaterialPageRoute(builder: (context) => isFamily ? const FamilyPairingView() : const PairingView()),
+                    );
+                  },
                 ),
-              )
-            else
-              ListView.separated(
-                shrinkWrap: true,
-                physics: const NeverScrollableScrollPhysics(),
-                itemCount: filteredReports.length,
-                separatorBuilder: (_, __) => const SizedBox(height: 18),
-                itemBuilder: (context, index) {
-                  final report = filteredReports[index];
-                  return _buildReportCard(report, isFamily, isCaregiver, activeElderlyId);
-                },
+              
+              _buildMoodBanner(todayMood),
+
+              Container(
+                padding: const EdgeInsets.all(20),
+                decoration: BoxDecoration(
+                  color: Colors.white,
+                  borderRadius: BorderRadius.circular(32),
+                  border: Border.all(color: const Color(0xFFF1F5F9)),
+                  boxShadow: const [
+                    BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4)),
+                  ],
+                ),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Care Reports Feed',
+                          style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
+                        ),
+                        const SizedBox(height: 2),
+                        Text(
+                          'Detailed daily logs, photos & injury updates',
+                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
+                        ),
+                      ],
+                    ),
+                    if (isCaregiver)
+                      ElevatedButton.icon(
+                        onPressed: () => _showNewReportModal(activeElderlyId),
+                        icon: const Icon(Icons.add_a_photo, size: 16),
+                        label: const Text('NEW REPORT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF2563EB),
+                          padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
+                        ),
+                      ),
+                  ],
+                ),
               ),
-          ],
+              const SizedBox(height: 16),
+              SingleChildScrollView(
+                scrollDirection: Axis.horizontal,
+                child: Row(
+                  children: [
+                    _buildCategoryChip('All Categories', null),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('📝 Daily Log', ReportCategory.dailyLog),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🩹 Wound Care', ReportCategory.injuryWound),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🥗 Meal & Food', ReportCategory.mealNutrition),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🏃 Mobility', ReportCategory.mobilityExercise),
+                    const SizedBox(width: 8),
+                    _buildCategoryChip('🩺 Medical', ReportCategory.medicalObservation),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 16),
+              if (filteredReports.isEmpty)
+                const Padding(
+                  padding: EdgeInsets.symmetric(vertical: 40),
+                  child: Center(
+                    child: Column(
+                      children: [
+                        Icon(Icons.assignment_turned_in_outlined, size: 54, color: Color(0xFFCBD5E1)),
+                        SizedBox(height: 10),
+                        Text('No care reports in this filter', style: TextStyle(fontSize: 14, fontWeight: FontWeight.bold, color: Color(0xFF64748B))),
+                      ],
+                    ),
+                  ),
+                )
+              else
+                ListView.separated(
+                  shrinkWrap: true,
+                  physics: const NeverScrollableScrollPhysics(),
+                  itemCount: filteredReports.length,
+                  separatorBuilder: (_, __) => const SizedBox(height: 18),
+                  itemBuilder: (context, index) {
+                    final report = filteredReports[index];
+                    return _buildReportCard(report, isFamily, isCaregiver, activeElderlyId);
+                  },
+                ),
+            ],
+          ),
         ),
         if (_lightboxImageUrl != null)
           Positioned.fill(
@@ -445,7 +463,6 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
       child: Row(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // FIX 2: Updates Family Member Acknowledgement Icon to Parse the dynamic family profile photo
           CircleAvatar(
             radius: 16,
             backgroundColor: const Color(0xFF10B981),
@@ -544,6 +561,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
   }
 }
 
+// _NewReportModal implementation remains structurally the same as previous
 class _NewReportModal extends ConsumerStatefulWidget {
   final String patientId;
   final CareReport? existingReport;
