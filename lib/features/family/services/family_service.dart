@@ -43,6 +43,7 @@ class FamilyService {
         'name': (map['name'] ?? map['Name'] ?? 'Senior User').toString(),
         'profilePhotoUrl': (map['profilePhotoUrl'] ?? map['ProfilePhotoUrl'] ?? '').toString(),
         'connectionId': (map['connectionId'] ?? map['ConnectionId'] ?? '').toString(),
+        'latestMessageTime': (map['latestMessageTime'] ?? map['LatestMessageTime'] ?? '').toString(),
       };
     }).toList();
   }
@@ -180,7 +181,6 @@ class FamilyService {
   }
 
   Future<Map<String, dynamic>> getCareConnections(String token, String elderlyId) async {
-    // FIX: Changed from /user/ to /users/
     final endpoint = elderlyId.isNotEmpty ? '$_baseUrl/users/care-connections?elderlyId=$elderlyId' : '$_baseUrl/users/care-connections';
     final response = await _client.get(
       Uri.parse(endpoint),
@@ -190,7 +190,6 @@ class FamilyService {
   }
 
   Future<void> deleteCareConnection(String token, String connectionId) async {
-    // FIX: Changed from /user/ to /users/
     final response = await _client.delete(
       Uri.parse('$_baseUrl/users/care-connections/$connectionId'),
       headers: _headers(token),

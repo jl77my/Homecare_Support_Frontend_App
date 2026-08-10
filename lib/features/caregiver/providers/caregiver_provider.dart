@@ -212,7 +212,6 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     final token = _token;
     if (token == null) return;
     try {
-      // FIX: Ensure both arguments are passed to properly execute the network request
       final data = await _service.getCareConnections(token, '');
       
       final rawElderly = data['elderlyList'] as List<dynamic>? ?? [];
@@ -220,11 +219,21 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
       if (rawElderly.isNotEmpty) {
           parsedSeniors = rawElderly.map((item) {
             final map = item as Map<String, dynamic>;
+            final mappedElderlyId = (map['ConnectedUserId'] ?? map['elderlyId'] ?? '').toString();
+            final existingSenior = state.assignedSeniors.firstWhere(
+                (s) => s['elderlyId'] == mappedElderlyId, 
+                orElse: () => <String, String>{}
+            );
+            
+            final newTime = (map['latestMessageTime'] ?? map['LatestMessageTime'] ?? '').toString();
+            final fallbackTime = existingSenior['latestMessageTime'] ?? '';
+
             return {
-              'elderlyId': (map['ConnectedUserId'] ?? map['elderlyId'] ?? '').toString(),
+              'elderlyId': mappedElderlyId,
               'name': (map['ConnectedUserName'] ?? map['name'] ?? 'Senior User').toString(),
               'connectionId': (map['ConnectionId'] ?? '').toString(),
               'profilePhotoUrl': (map['ProfilePhotoUrl'] ?? '').toString(),
+              'latestMessageTime': newTime.isNotEmpty ? newTime : fallbackTime,
             };
           }).toList();
       }
@@ -344,6 +353,19 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         receiverId: receiverId,
       );
       await fetchChatMessages(elderlyId);
+
+      // Optimistic Local State Update for Chat Sorting
+      final updatedSeniors = state.assignedSeniors.map((senior) {
+        if (senior['elderlyId'] == elderlyId) {
+          return {
+            ...senior,
+            'latestMessageTime': DateTime.now().toIso8601String(),
+          };
+        }
+        return senior;
+      }).toList();
+      
+      state = state.copyWith(assignedSeniors: updatedSeniors);
       return true;
     } catch (e) {
       return _handleException(e);

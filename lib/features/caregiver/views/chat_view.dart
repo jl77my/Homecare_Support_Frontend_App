@@ -50,19 +50,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final bool autoBypass = isFamily && rawChannelsList.length == 1;
     final activeChannelData = _activeChannel ?? (autoBypass ? rawChannelsList.first : null);
 
-    // Apply Sorting logic for channels
+    // Strict global metadata sort: Eliminates timezone offset leaps entirely
     final List<Map<String, String>> channelsList = List.from(rawChannelsList);
     channelsList.sort((a, b) {
-      final aId = a['elderlyId'] ?? '';
-      final bId = b['elderlyId'] ?? '';
+      final aTimeStr = a['latestMessageTime'] ?? '';
+      final bTimeStr = b['latestMessageTime'] ?? '';
       
-      final aMsgs = messages.where((m) => m.elderlyId == aId);
-      final bMsgs = messages.where((m) => m.elderlyId == bId);
+      // Ensures accurate ISO parsing even if the server drops the 'T'
+      final aTime = aTimeStr.isNotEmpty ? DateTime.tryParse(aTimeStr.replaceFirst(' ', 'T')) ?? DateTime(2000) : DateTime(2000);
+      final bTime = bTimeStr.isNotEmpty ? DateTime.tryParse(bTimeStr.replaceFirst(' ', 'T')) ?? DateTime(2000) : DateTime(2000);
       
-      final aTime = aMsgs.isNotEmpty ? aMsgs.last.timestamp : DateTime(2000);
-      final bTime = bMsgs.isNotEmpty ? bMsgs.last.timestamp : DateTime(2000);
-      
-      return bTime.compareTo(aTime); // Descending order
+      return bTime.compareTo(aTime); 
     });
 
     if (autoBypass && !_hasAutoFetched && activeChannelData != null) {
