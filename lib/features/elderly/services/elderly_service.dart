@@ -1,3 +1,4 @@
+// lib/features/elderly/services/elderly_service.dart
 import 'dart:convert';
 import 'package:http/http.dart' as http;
 
@@ -7,7 +8,7 @@ class ElderlyService {
         _baseUrl = baseUrl ??
             const String.fromEnvironment(
               'API_BASE_URL',
-              defaultValue: 'http://localhost:3000/api', // 10.0.2.2 for Android Emulator
+              defaultValue: 'http://localhost:3000/api', 
             );
 
   final http.Client _client;
@@ -52,7 +53,6 @@ class ElderlyService {
     _parseResponse(response);
   }
 
-  // FIX: Added elderlyId parameter
   Future<Map<String, dynamic>> confirmMedication({
     required String token,
     required String medicationId,
@@ -105,16 +105,18 @@ class ElderlyService {
   }
 
   Future<Map<String, dynamic>> getCareConnections(String token) async {
+    // FIX: Changed from /user/ to /users/
     final response = await _client.get(
-      Uri.parse('$_baseUrl/user/care-connections'),
+      Uri.parse('$_baseUrl/users/care-connections'),
       headers: _headers(token),
     );
     return _parseResponse(response);
   }
 
   Future<void> deleteCareConnection(String token, String connectionId) async {
+    // FIX: Changed from /user/ to /users/
     final response = await _client.delete(
-      Uri.parse('$_baseUrl/user/care-connections/$connectionId'),
+      Uri.parse('$_baseUrl/users/care-connections/$connectionId'),
       headers: _headers(token),
     );
     _parseResponse(response);

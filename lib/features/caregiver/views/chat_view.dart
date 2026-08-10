@@ -1,6 +1,7 @@
 // lib/features/caregiver/views/chat_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:convert';
 import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
 import '../../auth/providers/auth_provider.dart';
@@ -43,11 +44,26 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final familyState = ref.watch(familyDashboardProvider);
     final caregiverState = ref.watch(caregiverProvider);
     
-    final List<Map<String, String>> channelsList = isFamily ? familyState.linkedSeniors : caregiverState.assignedSeniors;
+    final List<Map<String, String>> rawChannelsList = isFamily ? familyState.linkedSeniors : caregiverState.assignedSeniors;
     final messages = isFamily ? familyState.currentChatMessages : caregiverState.currentChatMessages;
     final isLoading = isFamily ? familyState.isLoading : caregiverState.isLoading;
-    final bool autoBypass = isFamily && channelsList.length == 1;
-    final activeChannelData = _activeChannel ?? (autoBypass ? channelsList.first : null);
+    final bool autoBypass = isFamily && rawChannelsList.length == 1;
+    final activeChannelData = _activeChannel ?? (autoBypass ? rawChannelsList.first : null);
+
+    // Apply Sorting logic for channels
+    final List<Map<String, String>> channelsList = List.from(rawChannelsList);
+    channelsList.sort((a, b) {
+      final aId = a['elderlyId'] ?? '';
+      final bId = b['elderlyId'] ?? '';
+      
+      final aMsgs = messages.where((m) => m.elderlyId == aId);
+      final bMsgs = messages.where((m) => m.elderlyId == bId);
+      
+      final aTime = aMsgs.isNotEmpty ? aMsgs.last.timestamp : DateTime(2000);
+      final bTime = bMsgs.isNotEmpty ? bMsgs.last.timestamp : DateTime(2000);
+      
+      return bTime.compareTo(aTime); // Descending order
+    });
 
     if (autoBypass && !_hasAutoFetched && activeChannelData != null) {
       _hasAutoFetched = true;
@@ -97,6 +113,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   itemBuilder: (context, index) {
                     final senior = channelsList[index];
                     final elderlyId = senior['elderlyId'] ?? '';
+                    final photoUrl = senior['profilePhotoUrl'] ?? '';
                     
                     final String? lastReadId = isFamily 
                         ? familyState.lastReadMessages[elderlyId] 
@@ -125,7 +142,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
                             leading: CircleAvatar(
                               radius: 24,
                               backgroundColor: const Color(0xFFEFF6FF),
-                              child: Text((senior['name'] ?? 'S').substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 18)),
+                              backgroundImage: (photoUrl.isNotEmpty)
+                                  ? (photoUrl.startsWith('data:image')
+                                      ? MemoryImage(base64Decode(photoUrl.split(',')[1]))
+                                      : NetworkImage(photoUrl)) as ImageProvider
+                                  : null,
+                              child: photoUrl.isEmpty
+                                  ? Text(
+                                      (senior['name'] ?? 'S').substring(0, 1).toUpperCase(),
+                                      style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 18),
+                                    )
+                                  : null,
                             ),
                             title: Text('Senior Channel: ${senior['name'] ?? "Senior Patient"}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                             subtitle: const Text('Tap to enter private care team chat', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),

@@ -20,7 +20,7 @@ class CaregiverState {
   final String? errorMessage;
   final String? activeReminderMessage;
   final String? todayMood;
-  final Map<String, String> lastReadMessages; // Map elderlyId -> messageId
+  final Map<String, String> lastReadMessages; 
 
   const CaregiverState({
     this.tasks = const [],
@@ -160,7 +160,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         activeElderlyId: currentActive,
       );
       if (currentActive.isNotEmpty) {
-        await fetchCareConnections(currentActive);
+        await fetchCareConnections();
         await fetchCareTasks(currentActive);
         await fetchHealthRecords(currentActive);
         await fetchCareReports(currentActive);
@@ -173,7 +173,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
 
   void switchElderlyContext(String elderlyId) {
     state = state.copyWith(activeElderlyId: elderlyId);
-    fetchCareConnections(elderlyId);
+    fetchCareConnections();
     fetchCareTasks(elderlyId);
     fetchHealthRecords(elderlyId);
     fetchCareReports(elderlyId);
@@ -208,14 +208,31 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     }
   }
 
-  Future<void> fetchCareConnections(String elderlyId) async {
+  Future<void> fetchCareConnections() async {
     final token = _token;
     if (token == null) return;
     try {
-      final data = await _service.getCareConnections(token, elderlyId);
+      // FIX: Ensure both arguments are passed to properly execute the network request
+      final data = await _service.getCareConnections(token, '');
+      
+      final rawElderly = data['elderlyList'] as List<dynamic>? ?? [];
+      List<Map<String, String>> parsedSeniors = state.assignedSeniors;
+      if (rawElderly.isNotEmpty) {
+          parsedSeniors = rawElderly.map((item) {
+            final map = item as Map<String, dynamic>;
+            return {
+              'elderlyId': (map['ConnectedUserId'] ?? map['elderlyId'] ?? '').toString(),
+              'name': (map['ConnectedUserName'] ?? map['name'] ?? 'Senior User').toString(),
+              'connectionId': (map['ConnectionId'] ?? '').toString(),
+              'profilePhotoUrl': (map['ProfilePhotoUrl'] ?? '').toString(),
+            };
+          }).toList();
+      }
+
       state = state.copyWith(
         activeCaregivers: data['caregivers'] as List<dynamic>? ?? [],
         activeFamilyMembers: data['familyMembers'] as List<dynamic>? ?? [],
+        assignedSeniors: parsedSeniors.isNotEmpty ? parsedSeniors : state.assignedSeniors,
       );
     } catch (e) {
       _handleException(e);
@@ -285,9 +302,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.deleteCareConnection(token, connectionId);
-      if (state.activeElderlyId.isNotEmpty) {
-        await fetchCareConnections(state.activeElderlyId);
-      }
+      await fetchCareConnections();
       await fetchAssignedSeniors();
       state = state.copyWith(isLoading: false);
       return true;

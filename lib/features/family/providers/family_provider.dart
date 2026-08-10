@@ -130,6 +130,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
         selectedElderlyId: currentActive,
       );
       if (currentActive.isNotEmpty) {
+        await fetchCareConnections();
         await fetchDashboardData(currentActive);
       }
     } catch (e) {
@@ -139,17 +140,35 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
 
   Future<void> switchElderlyContext(String elderlyId) async {
     state = state.copyWith(selectedElderlyId: elderlyId);
+    await fetchCareConnections();
     await fetchDashboardData(elderlyId);
   }
 
-  Future<void> fetchCareConnections(String elderlyId) async {
+  Future<void> fetchCareConnections() async {
     final token = _token;
     if (token == null) return;
     try {
-      final data = await _service.getCareConnections(token, elderlyId);
+      // FIX: Ensure both arguments are passed properly
+      final data = await _service.getCareConnections(token, '');
+      
+      final rawElderly = data['elderlyList'] as List<dynamic>? ?? [];
+      List<Map<String, String>> parsedSeniors = state.linkedSeniors;
+      if (rawElderly.isNotEmpty) {
+          parsedSeniors = rawElderly.map((item) {
+            final map = item as Map<String, dynamic>;
+            return {
+              'elderlyId': (map['ConnectedUserId'] ?? map['elderlyId'] ?? '').toString(),
+              'name': (map['ConnectedUserName'] ?? map['name'] ?? 'Senior User').toString(),
+              'connectionId': (map['ConnectionId'] ?? '').toString(),
+              'profilePhotoUrl': (map['ProfilePhotoUrl'] ?? '').toString(),
+            };
+          }).toList();
+      }
+
       state = state.copyWith(
         activeCaregivers: data['caregivers'] as List<dynamic>? ?? [],
         activeFamilyMembers: data['familyMembers'] as List<dynamic>? ?? [],
+        linkedSeniors: parsedSeniors.isNotEmpty ? parsedSeniors : state.linkedSeniors,
       );
     } catch (e) {
       _handleException(e);
@@ -245,9 +264,8 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     state = state.copyWith(isLoading: true, clearError: true);
     try {
       await _service.deleteCareConnection(token, connectionId);
-      if (state.selectedElderlyId.isNotEmpty) {
-        await fetchCareConnections(state.selectedElderlyId);
-      }
+      await fetchCareConnections();
+      await fetchLinkedSeniors();
       state = state.copyWith(isLoading: false);
       return true;
     } catch (e) {
@@ -282,7 +300,6 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
         todayMood: fetchedMood, 
         isLoading: false,
       );
-      await fetchCareConnections(elderlyId);
       await fetchCareTasks(elderlyId);
     } catch (e) {
       _handleException(e);
