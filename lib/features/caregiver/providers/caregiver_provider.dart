@@ -20,7 +20,7 @@ class CaregiverState {
   final String? errorMessage;
   final String? activeReminderMessage;
   final String? todayMood;
-  final String? lastReadMessageId;
+  final Map<String, String> lastReadMessages; // Map elderlyId -> messageId
 
   const CaregiverState({
     this.tasks = const [],
@@ -35,7 +35,7 @@ class CaregiverState {
     this.errorMessage,
     this.activeReminderMessage,
     this.todayMood,
-    this.lastReadMessageId,
+    this.lastReadMessages = const {},
   });
 
   CaregiverState copyWith({
@@ -53,7 +53,7 @@ class CaregiverState {
     bool clearError = false,
     bool clearReminder = false,
     String? todayMood,
-    String? lastReadMessageId,
+    Map<String, String>? lastReadMessages,
   }) {
     return CaregiverState(
       tasks: tasks ?? this.tasks,
@@ -68,7 +68,7 @@ class CaregiverState {
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       activeReminderMessage: clearReminder ? null : activeReminderMessage ?? this.activeReminderMessage,
       todayMood: todayMood ?? this.todayMood,
-      lastReadMessageId: lastReadMessageId ?? this.lastReadMessageId,
+      lastReadMessages: lastReadMessages ?? this.lastReadMessages,
     );
   }
 }
@@ -85,9 +85,11 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   IO.Socket? _socket;
   final AudioPlayer _audioPlayer = AudioPlayer();
 
-  void markChatAsRead() {
+  void markChatAsRead(String elderlyId) {
     if (state.currentChatMessages.isNotEmpty) {
-      state = state.copyWith(lastReadMessageId: state.currentChatMessages.last.id);
+      final updatedMap = Map<String, String>.from(state.lastReadMessages);
+      updatedMap[elderlyId] = state.currentChatMessages.last.id;
+      state = state.copyWith(lastReadMessages: updatedMap);
     }
   }
 
@@ -99,6 +101,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         .enableAutoConnect()
         .build());
     _socket?.connect();
+    
     _socket?.on('MEDICATION_ALARM', (data) async {
       final medElderlyId = data['elderlyId'];
       final isAssigned = state.assignedSeniors.any((s) => s['elderlyId'] == medElderlyId);
@@ -161,7 +164,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
         await fetchCareTasks(currentActive);
         await fetchHealthRecords(currentActive);
         await fetchCareReports(currentActive);
-        await fetchChatMessages(currentActive); // ADDED: Crucial for calculating unread counts
+        await fetchChatMessages(currentActive); 
       }
     } catch (e) {
       _handleException(e);
@@ -174,7 +177,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     fetchCareTasks(elderlyId);
     fetchHealthRecords(elderlyId);
     fetchCareReports(elderlyId);
-    fetchChatMessages(elderlyId); // ADDED: Ensures chat updates when changing patients
+    fetchChatMessages(elderlyId); 
   }
 
   Future<void> fetchHealthRecords(String elderlyId) async {

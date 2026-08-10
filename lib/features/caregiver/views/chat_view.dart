@@ -9,7 +9,6 @@ import '../providers/caregiver_provider.dart';
 
 class ChatView extends ConsumerStatefulWidget {
   const ChatView({super.key});
-
   @override
   ConsumerState<ChatView> createState() => _ChatViewState();
 }
@@ -30,7 +29,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final today = DateTime(now.year, now.month, now.day);
     final yesterday = today.subtract(const Duration(days: 1));
     final msgDate = DateTime(messageDate.year, messageDate.month, messageDate.day);
-
+    
     if (msgDate == today) return 'TODAY';
     else if (msgDate == yesterday) return 'YESTERDAY';
     else return DateFormat('MMM d, yyyy').format(messageDate);
@@ -41,14 +40,12 @@ class _ChatViewState extends ConsumerState<ChatView> {
     final authState = ref.watch(authProvider);
     final currentUser = authState.user;
     final isFamily = currentUser?.role.toLowerCase() == 'family';
-
     final familyState = ref.watch(familyDashboardProvider);
     final caregiverState = ref.watch(caregiverProvider);
-
+    
     final List<Map<String, String>> channelsList = isFamily ? familyState.linkedSeniors : caregiverState.assignedSeniors;
     final messages = isFamily ? familyState.currentChatMessages : caregiverState.currentChatMessages;
     final isLoading = isFamily ? familyState.isLoading : caregiverState.isLoading;
-
     final bool autoBypass = isFamily && channelsList.length == 1;
     final activeChannelData = _activeChannel ?? (autoBypass ? channelsList.first : null);
 
@@ -59,17 +56,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
       });
     }
 
-    // FIX: Removed `if (latestMsg.senderId != currentUser?.id)` condition. 
-    // Always mark as read when rendering the channel to keep internal ID logic accurate.
     if (activeChannelData != null && messages.isNotEmpty) {
       final latestMsg = messages.last;
-      if (isFamily && familyState.lastReadMessageId != latestMsg.id) {
+      final activeElderlyId = activeChannelData['elderlyId'] ?? '';
+      
+      if (isFamily && familyState.lastReadMessages[activeElderlyId] != latestMsg.id) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(familyDashboardProvider.notifier).markChatAsRead();
+          ref.read(familyDashboardProvider.notifier).markChatAsRead(activeElderlyId);
         });
-      } else if (!isFamily && caregiverState.lastReadMessageId != latestMsg.id) {
+      } else if (!isFamily && caregiverState.lastReadMessages[activeElderlyId] != latestMsg.id) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
-          ref.read(caregiverProvider.notifier).markChatAsRead();
+          ref.read(caregiverProvider.notifier).markChatAsRead(activeElderlyId);
         });
       }
     }
@@ -99,43 +96,67 @@ class _ChatViewState extends ConsumerState<ChatView> {
                   separatorBuilder: (_, __) => const SizedBox(height: 12),
                   itemBuilder: (context, index) {
                     final senior = channelsList[index];
-                    // MVP Indicator: If the global state doesn't match the last known message, flag it.
-                    final bool hasUnread = (isFamily ? familyState.lastReadMessageId == null : caregiverState.lastReadMessageId == null);
+                    final elderlyId = senior['elderlyId'] ?? '';
+                    
+                    final String? lastReadId = isFamily 
+                        ? familyState.lastReadMessages[elderlyId] 
+                        : caregiverState.lastReadMessages[elderlyId];
 
-                    return Card(
-                      elevation: 0,
-                      shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xFFF1F5F9))),
-                      child: ListTile(
-                        contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
-                        leading: CircleAvatar(
-                          radius: 24,
-                          backgroundColor: const Color(0xFFEFF6FF),
-                          child: Text((senior['name'] ?? 'S').substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 18)),
+                    int unreadCount = 0;
+                    if (messages.isNotEmpty && messages.first.elderlyId == elderlyId) {
+                      for (int i = messages.length - 1; i >= 0; i--) {
+                        if (messages[i].id == lastReadId) break;
+                        if (messages[i].senderId != currentUser?.id) unreadCount++;
+                      }
+                    } else {
+                      unreadCount = lastReadId == null ? 1 : 0;
+                    }
+
+                    final bool hasUnread = unreadCount > 0;
+
+                    return Stack(
+                      clipBehavior: Clip.none,
+                      children: [
+                        Card(
+                          elevation: 0,
+                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(24), side: const BorderSide(color: Color(0xFFF1F5F9))),
+                          child: ListTile(
+                            contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 8),
+                            leading: CircleAvatar(
+                              radius: 24,
+                              backgroundColor: const Color(0xFFEFF6FF),
+                              child: Text((senior['name'] ?? 'S').substring(0, 1).toUpperCase(), style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 18)),
+                            ),
+                            title: Text('Senior Channel: ${senior['name'] ?? "Senior Patient"}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
+                            subtitle: const Text('Tap to enter private care team chat', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
+                            trailing: const Icon(Icons.chevron_right, color: Color(0xFF2563EB)),
+                            onTap: () {
+                              setState(() => _activeChannel = senior);
+                              if (elderlyId.isNotEmpty) {
+                                if (isFamily) ref.read(familyDashboardProvider.notifier).fetchChatMessages(elderlyId);
+                                else ref.read(caregiverProvider.notifier).fetchChatMessages(elderlyId);
+                              }
+                            },
+                          ),
                         ),
-                        title: Text('Senior Channel: ${senior['name'] ?? "Senior Patient"}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
-                        subtitle: const Text('Tap to enter private care team chat', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                        trailing: Row(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            if (hasUnread)
-                              Container(
-                                margin: const EdgeInsets.only(right: 8),
-                                padding: const EdgeInsets.all(6),
-                                decoration: const BoxDecoration(color: Color(0xFF10B981), shape: BoxShape.circle),
-                                child: const Text('!', style: TextStyle(color: Colors.white, fontSize: 10, fontWeight: FontWeight.bold)),
+                        if (hasUnread)
+                          Positioned(
+                            top: -4,
+                            right: -4,
+                            child: Container(
+                              padding: const EdgeInsets.all(8),
+                              decoration: BoxDecoration(
+                                color: const Color(0xFFEF4444),
+                                shape: BoxShape.circle,
+                                border: Border.all(color: Colors.white, width: 2),
                               ),
-                            const Icon(Icons.chevron_right, color: Color(0xFF2563EB)),
-                          ],
-                        ),
-                        onTap: () {
-                          setState(() => _activeChannel = senior);
-                          final elderlyId = senior['elderlyId'] ?? '';
-                          if (elderlyId.isNotEmpty) {
-                            if (isFamily) ref.read(familyDashboardProvider.notifier).fetchChatMessages(elderlyId);
-                            else ref.read(caregiverProvider.notifier).fetchChatMessages(elderlyId);
-                          }
-                        },
-                      ),
+                              child: Text(
+                                '$unreadCount',
+                                style: const TextStyle(color: Colors.white, fontSize: 11, fontWeight: FontWeight.bold),
+                              ),
+                            ),
+                          ),
+                      ],
                     );
                   },
                 ),
@@ -199,7 +220,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
                               showDateHeader = true;
                             }
                           }
+                          
                           final timeString = DateFormat('h:mm a').format(msg.timestamp.toLocal());
+
                           return Column(
                             crossAxisAlignment: CrossAxisAlignment.stretch,
                             children: [

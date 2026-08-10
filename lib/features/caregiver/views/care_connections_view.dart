@@ -6,50 +6,85 @@ import '../../family/providers/family_provider.dart';
 import '../../caregiver/providers/caregiver_provider.dart';
 import '../../elderly/providers/elderly_provider.dart';
 
-class CareConnectionsView extends ConsumerWidget {
+class CareConnectionsView extends ConsumerStatefulWidget {
   final VoidCallback onBack;
-
   const CareConnectionsView({super.key, required this.onBack});
 
   @override
-  Widget build(BuildContext context, WidgetRef ref) {
+  ConsumerState<CareConnectionsView> createState() => _CareConnectionsViewState();
+}
+
+class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
+  bool _isLoading = true;
+  List<dynamic> _elderlyList = [];
+  List<dynamic> _caregivers = [];
+  List<dynamic> _familyMembers = [];
+
+  @override
+  void initState() {
+    super.initState();
+    _fetchGlobalConnections();
+  }
+
+  Future<void> _fetchGlobalConnections() async {
+    final user = ref.read(authProvider).user;
+    if (user == null) return;
+         
+    final role = user.role.toLowerCase();
+         
+    if (role == 'elderly') {
+      await ref.read(elderlyProvider.notifier).fetchCareConnections();
+      final state = ref.read(elderlyProvider);
+      setState(() {
+        _caregivers = state.activeCaregivers;
+        _familyMembers = state.activeFamilyMembers;
+        _isLoading = false;
+      });
+    } else if (role == 'caregiver') {
+      await ref.read(caregiverProvider.notifier).fetchCareConnections(''); 
+      final state = ref.read(caregiverProvider);
+      setState(() {
+        _elderlyList = state.assignedSeniors; 
+        _caregivers = state.activeCaregivers;
+        _familyMembers = state.activeFamilyMembers;
+        _isLoading = false;
+      });
+    } else if (role == 'family') {
+      await ref.read(familyDashboardProvider.notifier).fetchCareConnections('');
+      final state = ref.read(familyDashboardProvider);
+      setState(() {
+        _elderlyList = state.linkedSeniors; 
+        _caregivers = state.activeCaregivers;
+        _familyMembers = state.activeFamilyMembers;
+        _isLoading = false;
+      });
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
     final user = ref.watch(authProvider).user;
     if (user == null) return const SizedBox.shrink();
-
     final role = user.role.toLowerCase();
     final isElderly = role == 'elderly';
 
-    // 1. DYNAMIC DATA FETCHING BASED ON ROLE
-    List<dynamic> caregivers = [];
-    List<dynamic> familyMembers = [];
-
-    if (isElderly) {
-      caregivers = ref.watch(elderlyProvider).activeCaregivers;
-      familyMembers = ref.watch(elderlyProvider).activeFamilyMembers;
-    } else if (role == 'family') {
-      caregivers = ref.watch(familyDashboardProvider).activeCaregivers;
-      familyMembers = ref.watch(familyDashboardProvider).activeFamilyMembers;
-    } else if (role == 'caregiver') {
-      caregivers = ref.watch(caregiverProvider).activeCaregivers;
-      familyMembers = ref.watch(caregiverProvider).activeFamilyMembers;
-    }
-
-    // 2. PRIVILEGE EVALUATION FOR UI RENDERING
     bool _canRemove(String targetRole, String targetUserId) {
-      if (isElderly) return true; // Elderly can remove anyone
-      if (role == 'family') return targetRole == 'caregiver' || targetUserId == user.id; // Family can remove caregivers or self
-      if (role == 'caregiver') return targetUserId == user.id; // Caregiver can only remove self
+      if (isElderly) return true; 
+      if (role == 'family') return targetRole == 'caregiver' || targetUserId == user.id || targetRole == 'elderly'; 
+      if (role == 'caregiver') return targetUserId == user.id || targetRole == 'elderly'; 
       return false;
     }
 
-    void _executeDelete(String connectionId) {
+    void _executeDelete(String connectionId) async {
+      setState(() => _isLoading = true);
       if (isElderly) {
-        ref.read(elderlyProvider.notifier).deleteCareConnection(connectionId);
+        await ref.read(elderlyProvider.notifier).deleteCareConnection(connectionId);
       } else if (role == 'family') {
-        ref.read(familyDashboardProvider.notifier).deleteCareConnection(connectionId);
+        await ref.read(familyDashboardProvider.notifier).deleteCareConnection(connectionId);
       } else if (role == 'caregiver') {
-        ref.read(caregiverProvider.notifier).deleteCareConnection(connectionId);
+        await ref.read(caregiverProvider.notifier).deleteCareConnection(connectionId);
       }
+      _fetchGlobalConnections();
     }
 
     void _confirmDelete(BuildContext context, String connectionId, String name, String targetRole) {
@@ -65,7 +100,7 @@ class CareConnectionsView extends ConsumerWidget {
               onPressed: () {
                 Navigator.pop(context);
                 _executeDelete(connectionId);
-                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$name removed from care connections.')));
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text('$name removed from care connections.'), backgroundColor: const Color(0xFF10B981)));
               },
               child: const Text('REMOVE', style: TextStyle(color: Colors.white)),
             ),
@@ -74,15 +109,14 @@ class CareConnectionsView extends ConsumerWidget {
       );
     }
 
-    // 3. DYNAMIC CARD BUILDER
     Widget _buildConnectionCard(dynamic conn, String targetRole) {
-      final String targetId = conn['ConnectedUserId'] ?? '';
+      final String targetId = (conn['ConnectedUserId'] ?? conn['elderlyId'] ?? '').toString();
+      final String name = (conn['ConnectedUserName'] ?? conn['name'] ?? 'Unknown').toString();
+      final String connectionId = (conn['ConnectionId'] ?? conn['connectionId'] ?? '').toString();
       final bool canRemove = _canRemove(targetRole, targetId);
-      final String name = conn['ConnectedUserName'] ?? 'Unknown';
-      final String connectionId = conn['ConnectionId'] ?? '';
 
       return Card(
-        elevation: isElderly ? 4 : 0, // High-contrast for elderly
+        elevation: isElderly ? 4 : 0, 
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
           side: isElderly ? const BorderSide(color: Color(0xFF2563EB), width: 2) : BorderSide.none,
@@ -92,22 +126,16 @@ class CareConnectionsView extends ConsumerWidget {
           contentPadding: EdgeInsets.all(isElderly ? 16.0 : 8.0),
           leading: CircleAvatar(
             radius: isElderly ? 28 : 20,
-            backgroundColor: targetRole == 'caregiver' ? const Color(0xFFEFF6FF) : const Color(0xFFFEF2F2),
+            backgroundColor: targetRole == 'caregiver' ? const Color(0xFFEFF6FF) : (targetRole == 'elderly' ? const Color(0xFFF0FDF4) : const Color(0xFFFEF2F2)),
             child: Icon(
-              targetRole == 'caregiver' ? Icons.medical_services : Icons.family_restroom, 
-              color: targetRole == 'caregiver' ? const Color(0xFF2563EB) : const Color(0xFFEF4444),
+              targetRole == 'caregiver' ? Icons.medical_services : (targetRole == 'elderly' ? Icons.elderly : Icons.family_restroom), 
+              color: targetRole == 'caregiver' ? const Color(0xFF2563EB) : (targetRole == 'elderly' ? const Color(0xFF16A34A) : const Color(0xFFEF4444)),
               size: isElderly ? 28 : 20,
             ),
           ),
-          title: Text(
-            name, 
-            style: TextStyle(fontWeight: FontWeight.w900, fontSize: isElderly ? 20 : 16)
-          ),
-          subtitle: Text(
-            targetRole.toUpperCase(), 
-            style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)
-          ),
-          trailing: canRemove
+          title: Text(name, style: TextStyle(fontWeight: FontWeight.w900, fontSize: isElderly ? 20 : 16)),
+          subtitle: Text(targetRole.toUpperCase(), style: const TextStyle(color: Color(0xFF64748B), fontWeight: FontWeight.bold)),
+          trailing: (canRemove && connectionId.isNotEmpty)
               ? IconButton(
                   icon: Icon(Icons.remove_circle, color: const Color(0xFFEF4444), size: isElderly ? 32 : 24),
                   onPressed: () => _confirmDelete(context, connectionId, name, targetRole),
@@ -120,56 +148,60 @@ class CareConnectionsView extends ConsumerWidget {
     return Scaffold(
       backgroundColor: const Color(0xFFF8FAFC),
       appBar: AppBar(
-        leading: IconButton(
-          icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
-          onPressed: onBack,
-        ),
+        leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)), onPressed: widget.onBack),
         title: Text(isElderly ? 'My Care Network' : 'Care Team Directory', style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900)),
         backgroundColor: Colors.white,
         elevation: 0,
       ),
-      body: ListView(
-  padding: const EdgeInsets.all(20),
-  children: [
-    if (!isElderly) ...[
-      const Text('ACTIVE SENIOR PATIENT', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-      const SizedBox(height: 10),
-      Card(
-        elevation: 0,
-        color: const Color(0xFFEFF6FF),
-        shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(20),
-          side: const BorderSide(color: Color(0xFFBFDBFE), width: 2),
-        ),
-        margin: const EdgeInsets.only(bottom: 24),
-        child: ListTile(
-          contentPadding: const EdgeInsets.all(16.0),
-          leading: const CircleAvatar(
-            radius: 28,
-            backgroundColor: Color(0xFF2563EB),
-            child: Icon(Icons.elderly, color: Colors.white, size: 28),
-          ),
-          title: const Text('Linked Patient', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 18, color: Color(0xFF1E3A8A))),
-          subtitle: const Text('Primary Care Focus', style: TextStyle(color: Color(0xFF3B82F6), fontWeight: FontWeight.bold)),
-        ),
-      ),
-      const Text('To prevent duplicated care tasks, collaborate with active members below.', style: TextStyle(color: Color(0xFF64748B), fontSize: 13, fontWeight: FontWeight.w500)),
-      const SizedBox(height: 20),
-    ],
-    const Text('CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          if (caregivers.isEmpty) 
-            const Text('No caregivers assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-          ...caregivers.map((c) => _buildConnectionCard(c, 'caregiver')).toList(),
-
-          const SizedBox(height: 24),
-          const Text('FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
-          const SizedBox(height: 10),
-          if (familyMembers.isEmpty) 
-            const Text('No family members linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
-          ...familyMembers.map((f) => _buildConnectionCard(f, 'family')).toList(),
-        ],
-      ),
+      body: _isLoading 
+          ? const Center(child: CircularProgressIndicator())
+          : ListView(
+              padding: const EdgeInsets.all(20),
+              children: [
+                // ELDERLY VIEW LOGIC
+                if (isElderly) ...[
+                  const Text('ASSIGNED CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  if (_caregivers.isEmpty)
+                     const Text('No caregivers assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                  ..._caregivers.map((c) => _buildConnectionCard(c, 'caregiver')),
+                  const SizedBox(height: 24),
+                  const Text('LINKED FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  if (_familyMembers.isEmpty)
+                     const Text('No family members linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                  ..._familyMembers.map((f) => _buildConnectionCard(f, 'family')),
+                ] 
+                // CAREGIVER VIEW LOGIC
+                else if (role == 'caregiver') ...[
+                  const Text('ASSIGNED SENIORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  if (_elderlyList.isEmpty)
+                     const Text('No seniors assigned.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                  ..._elderlyList.map((e) => _buildConnectionCard(e, 'elderly')),
+                  const SizedBox(height: 24),
+                  const Text('LINKED FAMILY MEMBERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  if (_familyMembers.isEmpty)
+                     const Text('No family members linked to your assigned seniors.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                  ..._familyMembers.map((f) => _buildConnectionCard(f, 'family')),
+                ]
+                // FAMILY VIEW LOGIC
+                else if (role == 'family') ...[
+                  const Text('LINKED SENIORS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  if (_elderlyList.isEmpty)
+                     const Text('No seniors linked.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                  ..._elderlyList.map((e) => _buildConnectionCard(e, 'elderly')),
+                  const SizedBox(height: 24),
+                  const Text('ASSIGNED CAREGIVERS', style: TextStyle(fontSize: 12, fontWeight: FontWeight.w900, color: Color(0xFF64748B), letterSpacing: 1.0)),
+                  const SizedBox(height: 10),
+                  if (_caregivers.isEmpty)
+                     const Text('No caregivers assigned to your linked seniors.', style: TextStyle(color: Color(0xFF94A3B8), fontStyle: FontStyle.italic)),
+                  ..._caregivers.map((c) => _buildConnectionCard(c, 'caregiver')),
+                ],
+              ],
+            ),
     );
   }
 }

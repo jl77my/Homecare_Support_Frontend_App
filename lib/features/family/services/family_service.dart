@@ -29,20 +29,21 @@ class FamilyService {
     return _parseResponse(response);      
   }
 
-  Future<List<Map<String, String>>> getLinkedElderly(String token) async {          
-    final response = await _client.get(              
-      Uri.parse('$_baseUrl/family/linked-elderly'),              
-      headers: _headers(token),          
-    );          
-    final data = _parseResponse(response);          
-    final rawList = data['seniors'] as List<dynamic>? ?? [];          
-    return rawList.map((item) {              
-      final map = item as Map<String, dynamic>;              
-      return {                  
-        'elderlyId': (map['elderlyId'] ?? map['id'] ?? map['Id'] ?? '').toString(),                  
-        'name': (map['name'] ?? map['Name'] ?? 'Senior User').toString(),              
-      };          
-    }).toList();      
+  Future<List<Map<String, String>>> getLinkedElderly(String token) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/family/linked-elderly'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    final rawList = data['seniors'] as List<dynamic>? ?? [];
+    return rawList.map((item) {
+      final map = item as Map<String, dynamic>;
+      return {
+        'elderlyId': (map['elderlyId'] ?? map['id'] ?? map['Id'] ?? '').toString(),
+        'name': (map['name'] ?? map['Name'] ?? 'Senior User').toString(),
+        'connectionId': (map['connectionId'] ?? map['ConnectionId'] ?? '').toString(), // ADDED
+      };
+    }).toList();
   }
 
   Future<List<dynamic>> getCareTasks(String token, String patientId) async {          
