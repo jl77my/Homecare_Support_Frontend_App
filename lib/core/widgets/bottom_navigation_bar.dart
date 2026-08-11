@@ -112,7 +112,6 @@ class CustomBottomNavigationBar extends ConsumerWidget {
             badgeCount: unreadChats,
             badgeColor: const Color(0xFF10B981),
           ),
-          _buildNavItem(context, 'profile', Icons.person_outline, 'Profile', activeTab),
         ],
       ),
     );

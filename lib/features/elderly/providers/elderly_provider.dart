@@ -3,6 +3,7 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';   
 import 'package:socket_io_client/socket_io_client.dart' as IO;  
 import 'package:audioplayers/audioplayers.dart'; 
+import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';   
 import '../../auth/providers/auth_provider.dart';   
 import '../services/elderly_service.dart';   
@@ -61,13 +62,36 @@ final elderlyServiceProvider = Provider<ElderlyService>((ref) => ElderlyService(
 
 class ElderlyNotifier extends StateNotifier<ElderlyState> {         
   ElderlyNotifier(this._service, this._ref) : super(const ElderlyState()) {          
+    _loadAudioPreference();
     _initSocket();   
   }
 
   final ElderlyService _service;         
   final Ref _ref;         
   IO.Socket? _socket;      
-  final AudioPlayer _audioPlayer = AudioPlayer(); 
+  static const _audioPreferenceKey = 'elderly_reminder_audio_enabled';
+  final AudioPlayer _reminderAudioPlayer = AudioPlayer();
+  final AudioPlayer _sosAudioPlayer = AudioPlayer();
+
+  Future<void> _loadAudioPreference() async {
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      final isEnabled = preferences.getBool(_audioPreferenceKey) ?? true;
+      state = state.copyWith(isAudioEnabled: isEnabled);
+    } catch (e) {
+      debugPrint('Error loading reminder audio preference: $e');
+    }
+  }
+
+  Future<void> _playReminderSound({required bool loop}) async {
+    await _reminderAudioPlayer.stop();
+    await _reminderAudioPlayer.setReleaseMode(
+      loop ? ReleaseMode.loop : ReleaseMode.stop,
+    );
+    await _reminderAudioPlayer.play(
+      AssetSource('sounds/notification.mp3'),
+    );
+  }
 
   void _initSocket() {          
     const baseUrl = String.fromEnvironment('API_BASE_URL', defaultValue: 'http://localhost:3000/api');          
@@ -83,8 +107,8 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
       state = state.copyWith(isSosActive: true);
       
       try {
-        await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-        await _audioPlayer.play(AssetSource('sounds/sos_alarm.mp3'));
+        await _sosAudioPlayer.setReleaseMode(ReleaseMode.loop);
+        await _sosAudioPlayer.play(AssetSource('sounds/sos_alarm.mp3'));
       } catch (e) {
         debugPrint('Error playing emergency audio: $e');
       }
@@ -99,8 +123,7 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
         state = state.copyWith(activeReminderMessage: msg);
         try {
           if (state.isAudioEnabled) {
-            await _audioPlayer.setReleaseMode(ReleaseMode.loop);
-            await _audioPlayer.play(AssetSource('sounds/notification.mp3')); 
+            await _playReminderSound(loop: true);
           }
         } catch (e) {
           debugPrint('Audio error: $e');
@@ -109,13 +132,27 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     });
   }
 
-  void resolveReminder() {
-    _audioPlayer.stop();
+  Future<void> resolveReminder() async {
+    await _reminderAudioPlayer.stop();
     state = state.copyWith(clearReminder: true);
   }
 
-  void toggleAudio() {               
-    state = state.copyWith(isAudioEnabled: !state.isAudioEnabled);         
+  Future<bool> toggleAudio() async {
+    final isEnabled = !state.isAudioEnabled;
+    state = state.copyWith(isAudioEnabled: isEnabled);
+
+    try {
+      final preferences = await SharedPreferences.getInstance();
+      await preferences.setBool(_audioPreferenceKey, isEnabled);
+      if (isEnabled) {
+        await _playReminderSound(loop: false);
+      } else {
+        await _reminderAudioPlayer.stop();
+      }
+    } catch (e) {
+      debugPrint('Error changing reminder audio: $e');
+    }
+    return isEnabled;
   }
 
   Future<void> fetchReminders({String? elderlyId}) async {               
@@ -240,7 +277,7 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
 
   Future<void> resolveSOS() async {
     try {
-      await _audioPlayer.stop();
+      await _sosAudioPlayer.stop();
     } catch (e) {
       debugPrint('Error stopping audio: $e');
     }
@@ -250,7 +287,8 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
   @override
   void dispose() {
     _socket?.dispose();
-    _audioPlayer.dispose(); // Clean up audio resources on dispose
+    _reminderAudioPlayer.dispose();
+    _sosAudioPlayer.dispose();
     super.dispose();
   }
 

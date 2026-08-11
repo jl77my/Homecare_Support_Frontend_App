@@ -1,9 +1,9 @@
 // lib/features/caregiver/views/caregiver_status_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:intl/intl.dart';
 import '../../../core/models/models.dart';
 import '../../../core/widgets/health_prediction_card.dart';
+import '../../../core/widgets/live_health_report_card.dart';
 import '../providers/caregiver_provider.dart';
 import '../widgets/patient_selector_bar.dart';
 import 'pairing_view.dart';
@@ -87,15 +87,6 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
     final assignedSeniors = caregiverState.assignedSeniors;
     final HealthVitals? latest = caregiverState.vitals.isNotEmpty ? caregiverState.vitals.first : null;
 
-    int stability = 100;
-    if (latest != null && latest.alerts.isNotEmpty) {
-      stability = 100 - (latest.alerts.length * 15);
-      if (stability < 0) stability = 0;
-    }
-    
-    final heartRateDisplay = latest != null ? '${latest.heartRate}' : '--';
-    final bpDisplay = latest != null ? latest.bloodPressure : '--/--';
-
     if (caregiverState.isLoading && assignedSeniors.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -161,104 +152,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
             },
           ),
           
-          Container(
-            padding: const EdgeInsets.all(20),
-            decoration: BoxDecoration(
-              color: Colors.white,
-              borderRadius: BorderRadius.circular(32),
-              border: Border.all(color: const Color(0xFFF1F5F9)),
-              boxShadow: const [BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4))],
-            ),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                Row(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    Expanded(
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.start,
-                        children: [
-                          const Text(
-                            'Active Monitoring',
-                            style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
-                          ),
-                          if (latest != null)
-                            Padding(
-                              padding: const EdgeInsets.only(top: 2.0),
-                              child: Text(
-                                'Last updated: ${DateFormat('MMM d, hh:mm a').format(latest.timestamp)}',
-                                style: const TextStyle(fontSize: 10, color: Color(0xFF64748B), fontWeight: FontWeight.bold),
-                              ),
-                            ),
-                        ],
-                      ),
-                    ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 3),
-                      decoration: BoxDecoration(color: const Color(0xFFDCFCE7), borderRadius: BorderRadius.circular(12)),
-                      child: const Text('LIVE', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF15803D))),
-                    ),
-                  ],
-                ),
-                const SizedBox(height: 16),
-                Row(
-                  children: [
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.favorite, size: 14, color: Color(0xFF94A3B8)),
-                                SizedBox(width: 4),
-                                Text('HEART RATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Row(
-                              crossAxisAlignment: CrossAxisAlignment.baseline,
-                              textBaseline: TextBaseline.alphabetic,
-                              children: [
-                                Text(heartRateDisplay, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                                const SizedBox(width: 4),
-                                const Text('BPM', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF94A3B8))),
-                              ],
-                            ),
-                          ],
-                        ),
-                      ),
-                    ),
-                    const SizedBox(width: 12),
-                    Expanded(
-                      child: Container(
-                        padding: const EdgeInsets.all(16),
-                        decoration: BoxDecoration(color: const Color(0xFFF8FAFC), borderRadius: BorderRadius.circular(20), border: Border.all(color: const Color(0xFFF1F5F9))),
-                        child: Column(
-                          crossAxisAlignment: CrossAxisAlignment.start,
-                          children: [
-                            const Row(
-                              children: [
-                                Icon(Icons.show_chart, size: 14, color: Color(0xFF94A3B8)),
-                                SizedBox(width: 4),
-                                Text('BLOOD PRESSURE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8))),
-                              ],
-                            ),
-                            const SizedBox(height: 6),
-                            Text(bpDisplay, style: const TextStyle(fontSize: 26, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
-                          ],
-                        ),
-                      ),
-                    ),
-                  ],
-                ),
-              ],
-            ),
-          ),
+          LiveHealthReportCard(latestVital: latest),
           const SizedBox(height: 20),
           HealthPredictionCard(prediction: caregiverState.healthPrediction),
           const SizedBox(height: 20),

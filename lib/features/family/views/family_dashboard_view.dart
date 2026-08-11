@@ -33,12 +33,7 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
     final linkedSeniors = familyState.linkedSeniors;
     final selectedElderlyId = familyState.selectedElderlyId;
 
-    int stability = 100;
-    if (latestVital != null && latestVital.alerts.isNotEmpty) {
-      stability = 100 - (latestVital.alerts.length * 15);
-      if (stability < 0) stability = 0;
-    }
-
+    
     if (familyState.isLoading && linkedSeniors.isEmpty) {
       return const Center(child: CircularProgressIndicator());
     }
@@ -289,11 +284,7 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
                           ),
                           Column(
                             crossAxisAlignment: CrossAxisAlignment.end,
-                            children: [
-                              const Text('STABILITY', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 0.8)),
-                              Text('$stability%', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900, color: stability < 80 ? const Color(0xFFEF4444) : const Color(0xFF4ADE80))),
-                            ],
-                          ),
+                                                     ),
                         ],
                       ),
                     ),

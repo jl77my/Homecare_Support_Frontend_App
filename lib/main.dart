@@ -36,12 +36,34 @@ class HomeCareApp extends ConsumerStatefulWidget {
 
 class _HomeCareAppState extends ConsumerState<HomeCareApp> {
   String _activeTab = 'status';
+  late final ProviderSubscription<String?> _authUserSubscription;
+
+  @override
+  void initState() {
+    super.initState();
+    _authUserSubscription = ref.listenManual<String?>(
+      authProvider.select((state) => state.user?.id),
+      (previousUserId, currentUserId) {
+        if (currentUserId != null && currentUserId != previousUserId && mounted) {
+          setState(() => _activeTab = 'status');
+        }
+      },
+    );
+  }
+
+  @override
+  void dispose() {
+    _authUserSubscription.close();
+    super.dispose();
+  }
 
   void _setActiveTab(String tabKey) {
     setState(() {
       _activeTab = tabKey;
     });
   }
+
+  void _goToDashboard() => _setActiveTab('status');
 
   @override
   Widget build(BuildContext context) {
@@ -56,46 +78,52 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
           ? const AuthFlowView()
           : Scaffold(
               appBar: AppBar(
-                title: Row(
-                  children: [
-                    Container(
-                      padding: const EdgeInsets.all(8),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(14),
-                        border: Border.all(color: const Color(0xFFDBEAFE)),
-                      ),
-                      child: const Icon(Icons.diversity_1, color: Color(0xFF2563EB), size: 20),
-                    ),
-                    const SizedBox(width: 10),
-                    const Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text('HomeCare', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                        Text(
-                          'CONNECTED SENIOR SUPPORT',
-                          style: TextStyle(
-                            fontSize: 8,
-                            fontWeight: FontWeight.w900,
-                            color: Color(0xFF94A3B8),
-                            letterSpacing: 1.0,
+                titleSpacing: 8,
+                title: Semantics(
+                  button: true,
+                  label: 'Go to dashboard',
+                  child: InkWell(
+                    key: const Key('homecare_dashboard_button'),
+                    onTap: _goToDashboard,
+                    borderRadius: BorderRadius.circular(14),
+                    child: Padding(
+                      padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+                      child: Row(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          Container(
+                            width: 40,
+                            height: 40,
+                            decoration: BoxDecoration(
+                              color: const Color(0xFFEF4444).withOpacity(0.12),
+                              borderRadius: BorderRadius.circular(14),
+                              border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.24)),
+                            ),
+                            child: const Icon(Icons.favorite, color: Color(0xFFEF4444), size: 22),
                           ),
-                        ),
-                      ],
+                          const SizedBox(width: 10),
+                          const Column(
+                            crossAxisAlignment: CrossAxisAlignment.start,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              Text('HomeCare', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
+                              Text(
+                                'CONNECTED SENIOR SUPPORT',
+                                style: TextStyle(
+                                  fontSize: 8,
+                                  fontWeight: FontWeight.w900,
+                                  color: Color(0xFF94A3B8),
+                                  letterSpacing: 1.0,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ],
+                      ),
                     ),
-                  ],
+                  ),
                 ),
                 actions: [
-                  if (user.role.toLowerCase() != 'elderly') ...[
-                    IconButton(
-                      icon: const Icon(Icons.assignment_outlined),
-                      onPressed: () => _setActiveTab('reports'),
-                    ),
-                    IconButton(
-                      icon: const Icon(Icons.notifications_none),
-                      onPressed: () => _setActiveTab('reminders'),
-                    ),
-                  ],
                   GestureDetector(
                     onTap: () => _setActiveTab('profile'),
                     child: Padding(
@@ -175,9 +203,13 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
       case 'account_settings':
         return AccountSettingsView(onBack: () => _setActiveTab('profile'));
       default:
-        return FamilyDashboardView(
-          onNavigateToReports: () => _setActiveTab('reports'),
-        );
+        return userRole.toLowerCase() == 'family'
+            ? FamilyDashboardView(
+                onNavigateToReports: () => _setActiveTab('reports'),
+              )
+            : CaregiverStatusView(
+                onNavigateToReports: () => _setActiveTab('reports'),
+              );
     }
   }
 }
