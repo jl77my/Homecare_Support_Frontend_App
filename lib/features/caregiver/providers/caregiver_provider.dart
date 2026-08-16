@@ -21,7 +21,7 @@ class CaregiverState {
   final String? errorMessage;
   final String? activeReminderMessage;
   final String? todayMood;
-  final Map<String, String> lastReadMessages; 
+  final Map<String, int> unreadCounts;
 
   const CaregiverState({
     this.tasks = const [],
@@ -37,7 +37,7 @@ class CaregiverState {
     this.errorMessage,
     this.activeReminderMessage,
     this.todayMood,
-    this.lastReadMessages = const {},
+    this.unreadCounts = const {},
   });
 
   CaregiverState copyWith({
@@ -56,7 +56,7 @@ class CaregiverState {
     bool clearError = false,
     bool clearReminder = false,
     String? todayMood,
-    Map<String, String>? lastReadMessages,
+    Map<String, int>? unreadCounts,
   }) {
     return CaregiverState(
       tasks: tasks ?? this.tasks,
@@ -72,7 +72,7 @@ class CaregiverState {
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       activeReminderMessage: clearReminder ? null : activeReminderMessage ?? this.activeReminderMessage,
       todayMood: todayMood ?? this.todayMood,
-      lastReadMessages: lastReadMessages ?? this.lastReadMessages,
+      unreadCounts: unreadCounts ?? this.unreadCounts,
     );
   }
 }
@@ -88,12 +88,30 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   final Ref _ref;
   IO.Socket? _socket;
   final AudioPlayer _audioPlayer = AudioPlayer();
+  final Set<String> _markingReadChannels = <String>{};
 
-  void markChatAsRead(String elderlyId) {
-    if (state.currentChatMessages.isNotEmpty) {
-      final updatedMap = Map<String, String>.from(state.lastReadMessages);
-      updatedMap[elderlyId] = state.currentChatMessages.last.id;
-      state = state.copyWith(lastReadMessages: updatedMap);
+  Future<void> markChatAsRead(String elderlyId) async {
+    final token = _token;
+    if (token == null || !_markingReadChannels.add(elderlyId)) return;
+
+    try {
+      final channelMessages = state.currentChatMessages
+          .where((message) => message.elderlyId == elderlyId)
+          .toList();
+      if (channelMessages.isEmpty) return;
+
+      final unreadCount = await _service.markChatAsRead(
+        token: token,
+        elderlyId: elderlyId,
+        lastReadMessageId: channelMessages.last.id,
+      );
+      final updatedCounts = Map<String, int>.from(state.unreadCounts);
+      updatedCounts[elderlyId] = unreadCount;
+      state = state.copyWith(unreadCounts: updatedCounts);
+    } catch (e) {
+      _handleException(e);
+    } finally {
+      _markingReadChannels.remove(elderlyId);
     }
   }
 
@@ -154,7 +172,12 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
     final token = _token;
     if (token == null) return;
     try {
-      final seniors = await _service.getAssignedSeniors(token);
+      final results = await Future.wait([
+        _service.getAssignedSeniors(token),
+        _service.getUnreadCounts(token),
+      ]);
+      final seniors = results[0] as List<Map<String, String>>;
+      final unreadCounts = results[1] as Map<String, int>;
       String currentActive = state.activeElderlyId;
       if (currentActive.isEmpty && seniors.isNotEmpty) {
         currentActive = seniors.first['elderlyId'] ?? '';
@@ -162,6 +185,7 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
       state = state.copyWith(
         assignedSeniors: seniors,
         activeElderlyId: currentActive,
+        unreadCounts: unreadCounts,
       );
       if (currentActive.isNotEmpty) {
         await fetchCareConnections();
@@ -332,7 +356,11 @@ class CaregiverNotifier extends StateNotifier<CaregiverState> {
   Future<void> fetchChatMessages(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      currentChatMessages: const [],
+      isLoading: true,
+      clearError: true,
+    );
     try {
       final messages = await _service.getChatMessages(
         token: token,

@@ -214,6 +214,32 @@ class CaregiverService {
     return rawList.map((json) => ChatMessage.fromJson(json)).toList();
   }
 
+  Future<Map<String, int>> getUnreadCounts(String token) async {
+    final response = await _client.get(
+      Uri.parse('$_baseUrl/chat/unread-counts'),
+      headers: _headers(token),
+    );
+    final data = _parseResponse(response);
+    final rawCounts = data['unreadCounts'] as Map<String, dynamic>? ?? {};
+    return rawCounts.map(
+      (elderlyId, count) => MapEntry(elderlyId, (count as num).toInt()),
+    );
+  }
+
+  Future<int> markChatAsRead({
+    required String token,
+    required String elderlyId,
+    required String lastReadMessageId,
+  }) async {
+    final response = await _client.post(
+      Uri.parse('$_baseUrl/chat/messages/$elderlyId/read'),
+      headers: _headers(token),
+      body: jsonEncode({'lastReadMessageId': lastReadMessageId}),
+    );
+    final data = _parseResponse(response);
+    return (data['unreadCount'] as num?)?.toInt() ?? 0;
+  }
+
   Future<Map<String, dynamic>> sendMessage({
     required String token,
     required String elderlyId,

@@ -1,7 +1,8 @@
-// lib/features/auth/views/auth_flow_view.dart
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+
 import '../../../core/models/enums.dart';
+import '../../../core/theme/app_theme.dart';
 import '../providers/auth_provider.dart';
 
 class AuthFlowView extends ConsumerStatefulWidget {
@@ -12,246 +13,129 @@ class AuthFlowView extends ConsumerStatefulWidget {
 }
 
 class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
-  String _step = 'role'; 
+  String _step = 'role';
   UserRole _selectedRole = UserRole.elderly;
-  
-  final _regNameController = TextEditingController();
-  final _regEmailController = TextEditingController();
-  final _regPasswordController = TextEditingController();
-  final _regConfirmPasswordController = TextEditingController();
+  final _regName = TextEditingController();
+  final _regEmail = TextEditingController();
+  final _regPassword = TextEditingController();
+  final _regConfirmPassword = TextEditingController();
+  final _loginEmail = TextEditingController();
+  final _loginPassword = TextEditingController();
+  bool _acceptedTerms = false;
   bool _showRegPassword = false;
-  bool _acceptedTerms = false; // FIX 3: Checkbox state
-
-  final _loginEmailController = TextEditingController();
-  final _loginPasswordController = TextEditingController();
   bool _showLoginPassword = false;
-
-  String? _authError;
-  String? _regSuccessMsg;
-
-  final RegExp _emailRegExp = RegExp(
-    r"^[a-zA-Z0-9.a-zA-Z0-9.!#$%&'*+/=?^_`{|}~-]+@[a-zA-Z0-9]+\.[a-zA-Z]+",
-  );
+  String? _message;
+  bool _messageIsError = true;
 
   @override
   void dispose() {
-    _regNameController.dispose();
-    _regEmailController.dispose();
-    _regPasswordController.dispose();
-    _regConfirmPasswordController.dispose();
-    _loginEmailController.dispose();
-    _loginPasswordController.dispose();
+    _regName.dispose();
+    _regEmail.dispose();
+    _regPassword.dispose();
+    _regConfirmPassword.dispose();
+    _loginEmail.dispose();
+    _loginPassword.dispose();
     super.dispose();
   }
 
-  void _handleSelectRole(UserRole role) {
-    setState(() {
-      _selectedRole = role;
-      _authError = null;
-      _regSuccessMsg = null;
-      _step = 'register';
-    });
-  }
+  void _go(String step) => setState(() {
+        _step = step;
+        _message = null;
+      });
 
-  Future<void> _handleRegister() async {
-    setState(() {
-      _authError = null;
-      _regSuccessMsg = null;
-    });
+  void _setMessage(String text, {bool error = true}) => setState(() {
+        _message = text;
+        _messageIsError = error;
+      });
 
-    if (!_acceptedTerms) {
-      setState(() => _authError = 'You must agree to the Privacy Statement and Terms to create an account.');
-      return;
-    }
-
-    final name = _regNameController.text.trim();
-    final email = _regEmailController.text.trim();
-    final password = _regPasswordController.text;
-    final confirmPassword = _regConfirmPasswordController.text;
-
+  Future<void> _register() async {
+    final name = _regName.text.trim();
+    final email = _regEmail.text.trim();
+    final password = _regPassword.text;
     if (name.isEmpty || email.isEmpty || password.isEmpty) {
-      setState(() => _authError = 'Please fill in all required fields.');
+      _setMessage('Complete all required fields.');
       return;
     }
-
-    if (!_emailRegExp.hasMatch(email)) {
-      setState(() => _authError = 'Please enter a valid email address.');
+    if (!RegExp(r'^[^@\s]+@[^@\s]+\.[^@\s]+$').hasMatch(email)) {
+      _setMessage('Enter a valid email address.');
       return;
     }
-
-    if (password != confirmPassword) {
-      setState(() => _authError = 'Passwords do not match.');
-      return;
-    }
-
     if (password.length < 6) {
-      setState(() => _authError = 'Password should be at least 6 characters.');
+      _setMessage('Password must contain at least 6 characters.');
       return;
     }
-
+    if (password != _regConfirmPassword.text) {
+      _setMessage('Passwords do not match.');
+      return;
+    }
+    if (!_acceptedTerms) {
+      _setMessage('Accept the Terms of Service and Privacy Policy to continue.');
+      return;
+    }
     final success = await ref.read(authProvider.notifier).register(
           name: name,
           email: email,
           password: password,
           role: _selectedRole.name,
         );
-
-    if (success && mounted) {
-      setState(() {
-        _regSuccessMsg = 'Registration successful! Please log in with your credentials.';
-        _loginEmailController.text = email;
-        _loginPasswordController.text = '';
-        _step = 'login';
-      });
-    } else if (mounted) {
-      final error = ref.read(authProvider).errorMessage;
-      setState(() => _authError = error ?? 'Registration failed.');
+    if (!mounted) return;
+    if (success) {
+      _loginEmail.text = email;
+      _go('login');
+      _setMessage('Account created. Sign in to continue.', error: false);
+    } else {
+      _setMessage(ref.read(authProvider).errorMessage ?? 'Registration failed. Please try again.');
     }
   }
 
-  Future<void> _handleLogin() async {
-    setState(() => _authError = null);
-    final email = _loginEmailController.text.trim();
-    final password = _loginPasswordController.text;
-
+  Future<void> _login() async {
+    final email = _loginEmail.text.trim();
+    final password = _loginPassword.text;
     if (email.isEmpty || password.isEmpty) {
-      setState(() => _authError = 'Please provide both email and password.');
+      _setMessage('Enter your email address and password.');
       return;
     }
-
-    final success = await ref.read(authProvider.notifier).login(
-          email,
-          password,
-        );
-
+    final success = await ref.read(authProvider.notifier).login(email, password);
     if (!success && mounted) {
-      final error = ref.read(authProvider).errorMessage;
-      setState(() => _authError = error ?? 'Invalid credentials.');
+      _setMessage(ref.read(authProvider).errorMessage ?? 'Sign in failed. Check your details and try again.');
     }
   }
 
-  void _showTermsDialog() {
-    showDialog(
+  void _showTerms() {
+    showDialog<void>(
       context: context,
       builder: (context) => AlertDialog(
-        backgroundColor: const Color(0xFF262626),
-        title: const Text('Privacy Statement & Terms', style: TextStyle(color: Colors.white)),
+        title: const Text('Terms & privacy'),
         content: const SingleChildScrollView(
           child: Text(
-            'HomeCare is committed to protecting user health data and privacy in accordance with PDPA guidelines. By using this service, you consent to secure data storage and authorized sharing among your selected care network.',
-            style: TextStyle(color: Color(0xFFA3A3A3)),
+            'HomeCare protects personal and health information and shares it only with the care connections you authorize. By continuing, you consent to secure storage and care-team sharing for the app’s supported features.',
           ),
         ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.pop(context), 
-            child: const Text('CLOSE', style: TextStyle(color: Color(0xFF60A5FA)))
-          )
-        ],
+        actions: [TextButton(onPressed: () => Navigator.pop(context), child: const Text('Close'))],
       ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final authState = ref.watch(authProvider);
-
+    final loading = ref.watch(authProvider).isLoading;
     return Scaffold(
-      backgroundColor: const Color(0xFF171717),
+      backgroundColor: AppTheme.background,
       body: SafeArea(
-        child: Center(
-          child: SingleChildScrollView(
-            padding: const EdgeInsets.all(24.0),
-            child: ConstrainedBox(
-              constraints: const BoxConstraints(maxWidth: 420),
-              child: Column(
-                mainAxisAlignment: MainAxisAlignment.center,
-                children: [
-                  Container(
-                    width: 72,
-                    height: 72,
-                    decoration: BoxDecoration(
-                      color: const Color(0xFFEF4444).withOpacity(0.2),
-                      borderRadius: BorderRadius.circular(28),
-                      border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
-                    ),
-                    child: const Icon(Icons.favorite, color: Color(0xFFEF4444), size: 38),
-                  ),
-                  const SizedBox(height: 16),
-                  const Text(
-                    'HomeCare Portal',
-                    style: TextStyle(
-                      fontSize: 28,
-                      fontWeight: FontWeight.w900,
-                      color: Colors.white,
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                  const SizedBox(height: 6),
-                  const Text(
-                    'CAREGIVER, FAMILY & SENIOR PORTAL',
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.w800,
-                      color: Color(0xFF94A3B8),
-                      letterSpacing: 1.5,
-                    ),
-                  ),
-                  const SizedBox(height: 24),
-
-                  if (_authError != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEF4444).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFFEF4444).withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.error_outline, color: Color(0xFFFCA5A5), size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _authError!,
-                              style: const TextStyle(color: Color(0xFFFCA5A5), fontSize: 13, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  if (_regSuccessMsg != null) ...[
-                    Container(
-                      padding: const EdgeInsets.all(14),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFF10B981).withOpacity(0.15),
-                        borderRadius: BorderRadius.circular(16),
-                        border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-                      ),
-                      child: Row(
-                        children: [
-                          const Icon(Icons.check_circle_outline, color: Color(0xFF6EE7B7), size: 20),
-                          const SizedBox(width: 10),
-                          Expanded(
-                            child: Text(
-                              _regSuccessMsg!,
-                              style: const TextStyle(color: Color(0xFF6EE7B7), fontSize: 13, fontWeight: FontWeight.w600),
-                            ),
-                          ),
-                        ],
-                      ),
-                    ),
-                    const SizedBox(height: 16),
-                  ],
-
-                  AnimatedSwitcher(
-                    duration: const Duration(milliseconds: 300),
-                    child: _buildCurrentStep(authState.isLoading),
-                  ),
-                ],
+        child: LayoutBuilder(
+          builder: (context, constraints) => Center(
+            child: SingleChildScrollView(
+              padding: EdgeInsets.symmetric(horizontal: constraints.maxWidth < 420 ? 22 : 32, vertical: 24),
+              child: ConstrainedBox(
+                constraints: const BoxConstraints(maxWidth: 470),
+                child: AnimatedSwitcher(
+                  duration: const Duration(milliseconds: 220),
+                  child: _step == 'role'
+                      ? _rolePage()
+                      : _step == 'register'
+                          ? _registerPage(loading)
+                          : _loginPage(loading),
+                ),
               ),
             ),
           ),
@@ -260,435 +144,180 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
     );
   }
 
-  Widget _buildCurrentStep(bool isLoading) {
-    switch (_step) {
-      case 'role': return _buildRoleStep();
-      case 'register': return _buildRegisterStep(isLoading);
-      case 'login': return _buildLoginStep(isLoading);
-      default: return _buildRoleStep();
-    }
+  Widget _brand() => const Text.rich(
+        TextSpan(children: [
+          TextSpan(text: 'Home', style: TextStyle(color: AppTheme.navy)),
+          TextSpan(text: 'Care', style: TextStyle(color: AppTheme.primaryBlue)),
+        ]),
+        style: TextStyle(fontFamily: 'Georgia', fontSize: 29, fontWeight: FontWeight.w700),
+        textAlign: TextAlign.center,
+      );
+
+  Widget _rolePage() {
+    return Column(
+      key: const ValueKey('role'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _brand(),
+        const SizedBox(height: 28),
+        const Text('Welcome to HomeCare', style: _authHeadingStyle, textAlign: TextAlign.center),
+        const SizedBox(height: 8),
+        const Text('Choose how you’ll use the app', textAlign: TextAlign.center, style: TextStyle(fontSize: 17, color: AppTheme.textMuted)),
+        const SizedBox(height: 26),
+        _roleCard(UserRole.elderly, Icons.volunteer_activism_outlined, 'I’m receiving care', 'Manage your health and connect with your care team'),
+        const SizedBox(height: 12),
+        _roleCard(UserRole.caregiver, Icons.person_add_alt_1_outlined, 'I’m a caregiver', 'Provide care and support to someone you care for'),
+        const SizedBox(height: 12),
+        _roleCard(UserRole.family, Icons.people_outline_rounded, 'I’m family', 'Stay informed and support your loved one’s care'),
+        const SizedBox(height: 28),
+        FilledButton(onPressed: () => _go('register'), child: const Text('Continue')),
+        const SizedBox(height: 18),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [
+          const Text('Already have an account? '),
+          TextButton(onPressed: () => _go('login'), child: const Text('Sign in')),
+        ]),
+      ],
+    );
   }
 
-  Widget _buildRoleStep() {
-    return Column(
-      key: const ValueKey('step_role'),
-      children: [
-        Container(
-          padding: const EdgeInsets.all(20),
+  Widget _roleCard(UserRole role, IconData icon, String title, String subtitle) {
+    final selected = _selectedRole == role;
+    return Semantics(
+      button: true,
+      selected: selected,
+      label: '$title. $subtitle',
+      child: InkWell(
+        onTap: () => setState(() => _selectedRole = role),
+        borderRadius: BorderRadius.circular(14),
+        child: AnimatedContainer(
+          duration: const Duration(milliseconds: 180),
+          padding: const EdgeInsets.all(18),
           decoration: BoxDecoration(
-            color: const Color(0xFF262626),
-            borderRadius: BorderRadius.circular(28),
-            border: Border.all(color: const Color(0xFF404040)),
+            color: selected ? const Color(0xFFF0F7FF) : Colors.white,
+            borderRadius: BorderRadius.circular(14),
+            border: Border.all(color: selected ? AppTheme.primaryBlue : AppTheme.border, width: selected ? 2 : 1),
           ),
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              const Text(
-                'STEP 1: SELECT YOUR ROLE',
-                textAlign: TextAlign.center,
-                style: TextStyle(
-                  fontSize: 11,
-                  fontWeight: FontWeight.w900,
-                  color: Color(0xFFA3A3A3),
-                  letterSpacing: 1.2,
-                ),
-              ),
-              const SizedBox(height: 16),
-              _buildRoleCard(
-                emoji: '👵',
-                title: 'Senior / Elderly',
-                description: 'Simplified high-contrast view, big SOS & reminders',
-                role: UserRole.elderly,
-                color: const Color(0xFFF59E0B),
-              ),
-              const SizedBox(height: 12),
-              _buildRoleCard(
-                emoji: '🩺',
-                title: 'Caregiver Specialist',
-                description: 'Log vitals, write care reports with photos & manage tasks',
-                role: UserRole.caregiver,
-                color: const Color(0xFF3B82F6),
-              ),
-              const SizedBox(height: 12),
-              _buildRoleCard(
-                emoji: '👨‍👩‍👧',
-                title: 'Family Member',
-                description: 'View care reports, photo feeds, vitals & live updates',
-                role: UserRole.family,
-                color: const Color(0xFF10B981),
-              ),
-            ],
-          ),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildRoleCard({
-    required String emoji,
-    required String title,
-    required String description,
-    required UserRole role,
-    required Color color,
-  }) {
-    return InkWell(
-      onTap: () => _handleSelectRole(role),
-      borderRadius: BorderRadius.circular(20),
-      child: Container(
-        padding: const EdgeInsets.all(16),
-        decoration: BoxDecoration(
-          color: const Color(0xFF333333),
-          borderRadius: BorderRadius.circular(20),
-          border: Border.all(color: const Color(0xFF404040)),
-        ),
-        child: Row(
-          children: [
-            Container(
-              width: 48,
-              height: 48,
-              decoration: BoxDecoration(
-                color: color.withOpacity(0.2),
-                borderRadius: BorderRadius.circular(16),
-              ),
-              alignment: Alignment.center,
-              child: Text(emoji, style: const TextStyle(fontSize: 24)),
-            ),
-            const SizedBox(width: 14),
-            Expanded(
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Text(
-                    title,
-                    style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
-                  ),
-                  const SizedBox(height: 2),
-                  Text(
-                    description,
-                    style: const TextStyle(color: Color(0xFFA3A3A3), fontSize: 12, fontWeight: FontWeight.w500),
-                  ),
-                ],
-              ),
-            ),
-            const Icon(Icons.chevron_right, color: Color(0xFF737373)),
-          ],
+          child: Row(children: [
+            Container(width: 64, height: 64, decoration: const BoxDecoration(color: Color(0xFFE5F2FF), shape: BoxShape.circle), child: Icon(icon, color: AppTheme.primaryBlue, size: 32)),
+            const SizedBox(width: 18),
+            Expanded(child: Column(crossAxisAlignment: CrossAxisAlignment.start, children: [
+              Text(title, style: const TextStyle(fontSize: 18, fontWeight: FontWeight.w700)),
+              const SizedBox(height: 5),
+              Text(subtitle, style: const TextStyle(color: AppTheme.textMuted, height: 1.4)),
+            ])),
+            Icon(selected ? Icons.check_circle_rounded : Icons.chevron_right_rounded, color: AppTheme.primaryBlue),
+          ]),
         ),
       ),
     );
   }
 
-  Widget _buildRegisterStep(bool isLoading) {
-    return Container(
-      key: const ValueKey('step_register'),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF262626),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFF404040)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton.icon(
-                onPressed: () => setState(() => _step = 'role'),
-                icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFFA3A3A3)),
-                label: const Text('Back', style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF3B82F6).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF3B82F6).withOpacity(0.3)),
-                ),
-                child: Text(
-                  'ROLE: ${_selectedRole.name.toUpperCase()}',
-                  style: const TextStyle(color: Color(0xFF93C5FD), fontSize: 10, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Create Account',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            'Enter your details to register as a ${_selectedRole.name}',
-            textAlign: TextAlign.center,
-            style: const TextStyle(color: Color(0xFFA3A3A3), fontSize: 12),
-          ),
-          const SizedBox(height: 20),
-          _buildDarkTextField(
-            controller: _regNameController,
-            label: 'FULL NAME',
-            icon: Icons.person_outline,
-            hint: 'e.g. Sarah Johnson',
-          ),
-          const SizedBox(height: 12),
-          _buildDarkTextField(
-            controller: _regEmailController,
-            label: 'EMAIL ADDRESS',
-            icon: Icons.email_outlined,
-            hint: 'name@domain.com',
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 12),
-          _buildDarkTextField(
-            controller: _regPasswordController,
-            label: 'PASSWORD',
-            icon: Icons.lock_outline,
-            hint: 'At least 6 characters',
-            obscureText: !_showRegPassword,
-            suffixIcon: IconButton(
-              icon: Icon(_showRegPassword ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 20),
-              onPressed: () => setState(() => _showRegPassword = !_showRegPassword),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildDarkTextField(
-            controller: _regConfirmPasswordController,
-            label: 'CONFIRM PASSWORD',
-            icon: Icons.security_outlined,
-            hint: 'Re-enter password',
-            obscureText: !_showRegPassword,
-          ),
-          const SizedBox(height: 12),
-          
-          // FIX 3: PRIVACY & TERMS CHECKBOX
-          Row(
-            crossAxisAlignment: CrossAxisAlignment.center,
-            children: [
-              Checkbox(
-                value: _acceptedTerms,
-                onChanged: (val) => setState(() => _acceptedTerms = val ?? false),
-                activeColor: const Color(0xFF2563EB),
-                side: const BorderSide(color: Color(0xFF737373)),
-              ),
-              Expanded(
-                child: GestureDetector(
-                  onTap: _showTermsDialog,
-                  child: const Text.rich(
-                    TextSpan(
-                      text: 'By creating an account, you agree to our ',
-                      style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 11),
-                      children: [
-                        TextSpan(
-                          text: 'Privacy Statement and Terms',
-                          style: TextStyle(color: Color(0xFF60A5FA), fontWeight: FontWeight.bold, decoration: TextDecoration.underline),
-                        ),
-                        TextSpan(text: '.'),
-                      ],
-                    ),
-                  ),
-                ),
-              ),
-            ],
-          ),
-
-          const SizedBox(height: 16),
-          ElevatedButton(
-            onPressed: isLoading || !_acceptedTerms ? null : _handleRegister,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF2563EB),
-              disabledBackgroundColor: const Color(0xFF333333),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: isLoading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('CREATE ACCOUNT', style: TextStyle(fontWeight: FontWeight.w900)),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 18),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: GestureDetector(
-              onTap: () => setState(() {
-                _authError = null;
-                _step = 'login';
-              }),
-              child: const Text.rich(
-                TextSpan(
-                  text: 'Already registered? ',
-                  style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 12),
-                  children: [
-                    TextSpan(
-                      text: 'Sign In Here',
-                      style: TextStyle(color: Color(0xFF60A5FA), fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildLoginStep(bool isLoading) {
-    return Container(
-      key: const ValueKey('step_login'),
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: const Color(0xFF262626),
-        borderRadius: BorderRadius.circular(28),
-        border: Border.all(color: const Color(0xFF404040)),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.stretch,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              TextButton.icon(
-                onPressed: () => setState(() => _step = 'register'),
-                icon: const Icon(Icons.arrow_back, size: 16, color: Color(0xFFA3A3A3)),
-                label: const Text('Back', style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 12, fontWeight: FontWeight.w700)),
-              ),
-              Container(
-                padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
-                decoration: BoxDecoration(
-                  color: const Color(0xFF10B981).withOpacity(0.2),
-                  borderRadius: BorderRadius.circular(12),
-                  border: Border.all(color: const Color(0xFF10B981).withOpacity(0.3)),
-                ),
-                child: const Text(
-                  'ACCOUNT LOGIN',
-                  style: TextStyle(color: Color(0xFF6EE7B7), fontSize: 10, fontWeight: FontWeight.w900),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 12),
-          const Text(
-            'Welcome Back',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
-          ),
-          const SizedBox(height: 4),
-          const Text(
-            'Enter your email and password to access HomeCare',
-            textAlign: TextAlign.center,
-            style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 12),
-          ),
-          const SizedBox(height: 20),
-          _buildDarkTextField(
-            controller: _loginEmailController,
-            label: 'EMAIL ADDRESS',
-            icon: Icons.email_outlined,
-            hint: 'name@domain.com',
-            keyboardType: TextInputType.emailAddress,
-          ),
-          const SizedBox(height: 14),
-          _buildDarkTextField(
-            controller: _loginPasswordController,
-            label: 'PASSWORD',
-            icon: Icons.lock_outline,
-            hint: 'Enter your password',
-            obscureText: !_showLoginPassword,
-            suffixIcon: IconButton(
-              icon: Icon(_showLoginPassword ? Icons.visibility_off : Icons.visibility, color: Colors.white54, size: 20),
-              onPressed: () => setState(() => _showLoginPassword = !_showLoginPassword),
-            ),
-          ),
-          const SizedBox(height: 24),
-          ElevatedButton(
-            onPressed: isLoading ? null : _handleLogin,
-            style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
-              padding: const EdgeInsets.symmetric(vertical: 16),
-            ),
-            child: isLoading
-                ? const SizedBox(height: 20, width: 20, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2))
-                : const Row(
-                    mainAxisAlignment: MainAxisAlignment.center,
-                    children: [
-                      Text('SIGN IN TO DASHBOARD', style: TextStyle(fontWeight: FontWeight.w900)),
-                      SizedBox(width: 8),
-                      Icon(Icons.arrow_forward, size: 18),
-                    ],
-                  ),
-          ),
-          const SizedBox(height: 16),
-          Center(
-            child: GestureDetector(
-              onTap: () => setState(() {
-                _authError = null;
-                _step = 'register';
-              }),
-              child: const Text.rich(
-                TextSpan(
-                  text: 'Need a new account? ',
-                  style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 12),
-                  children: [
-                    TextSpan(
-                      text: 'Register Now',
-                      style: TextStyle(color: Color(0xFF60A5FA), fontWeight: FontWeight.bold),
-                    ),
-                  ],
-                ),
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildDarkTextField({
-    required TextEditingController controller,
-    required String label,
-    required IconData icon,
-    required String hint,
-    bool obscureText = false,
-    Widget? suffixIcon,
-    TextInputType? keyboardType,
-  }) {
+  Widget _registerPage(bool loading) {
     return Column(
-      crossAxisAlignment: CrossAxisAlignment.start,
+      key: const ValueKey('register'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        Padding(
-          padding: const EdgeInsets.only(left: 4, bottom: 4),
-          child: Text(
-            label,
-            style: const TextStyle(color: Color(0xFFA3A3A3), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 1.0),
-          ),
-        ),
-        TextField(
-          controller: controller,
-          obscureText: obscureText,
-          keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white, fontSize: 14, fontWeight: FontWeight.w600),
-          decoration: InputDecoration(
-            hintText: hint,
-            hintStyle: const TextStyle(color: Color(0xFF525252), fontSize: 14),
-            prefixIcon: Icon(icon, color: const Color(0xFF737373), size: 20),
-            suffixIcon: suffixIcon,
-            filled: true,
-            fillColor: const Color(0xFF171717),
-            contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-            enabledBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFF404040)),
-            ),
-            focusedBorder: OutlineInputBorder(
-              borderRadius: BorderRadius.circular(16),
-              borderSide: const BorderSide(color: Color(0xFF2563EB), width: 2),
-            ),
-          ),
-        ),
+        _back(() => _go('role')),
+        const SizedBox(height: 22),
+        const Text('Create your account', style: _authHeadingStyle),
+        const SizedBox(height: 12),
+        Align(alignment: Alignment.centerLeft, child: Chip(avatar: const Icon(Icons.person_outline, size: 20), label: Text(_roleName(_selectedRole)))),
+        const SizedBox(height: 18),
+        _fieldLabel('Full name'),
+        TextField(controller: _regName, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.name], decoration: const InputDecoration(prefixIcon: Icon(Icons.person_outline_rounded))),
+        const SizedBox(height: 14),
+        _fieldLabel('Email address'),
+        TextField(controller: _regEmail, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded))),
+        const SizedBox(height: 14),
+        _fieldLabel('Password'),
+        _passwordField(_regPassword, _showRegPassword, () => setState(() => _showRegPassword = !_showRegPassword)),
+        const SizedBox(height: 14),
+        _fieldLabel('Confirm password'),
+        _passwordField(_regConfirmPassword, _showRegPassword, () => setState(() => _showRegPassword = !_showRegPassword), onSubmitted: (_) => _register()),
+        const SizedBox(height: 12),
+        Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
+          Checkbox(value: _acceptedTerms, onChanged: loading ? null : (value) => setState(() => _acceptedTerms = value ?? false)),
+          Expanded(child: Padding(padding: const EdgeInsets.only(top: 12), child: Wrap(children: [
+            const Text('I agree to the '),
+            InkWell(onTap: _showTerms, child: const Text('Terms of Service and Privacy Policy', style: TextStyle(color: AppTheme.primaryBlue, decoration: TextDecoration.underline))),
+          ]))),
+        ]),
+        _statusMessage(),
+        const SizedBox(height: 16),
+        FilledButton(onPressed: loading ? null : _register, child: loading ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Create account')),
+        const SizedBox(height: 18),
+        Row(mainAxisAlignment: MainAxisAlignment.center, children: [const Text('Already registered? '), TextButton(onPressed: () => _go('login'), child: const Text('Sign in'))]),
       ],
     );
   }
+
+  Widget _loginPage(bool loading) {
+    return Column(
+      key: const ValueKey('login'),
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _back(() => _go('role')),
+        const SizedBox(height: 28),
+        const Text('Welcome back', style: _authHeadingStyle),
+        const SizedBox(height: 8),
+        const Text('Sign in to continue', style: TextStyle(fontSize: 17, color: AppTheme.textMuted)),
+        const SizedBox(height: 36),
+        _fieldLabel('Email address'),
+        TextField(controller: _loginEmail, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded))),
+        const SizedBox(height: 16),
+        _fieldLabel('Password'),
+        _passwordField(_loginPassword, _showLoginPassword, () => setState(() => _showLoginPassword = !_showLoginPassword), onSubmitted: (_) => _login()),
+        _statusMessage(),
+        const SizedBox(height: 30),
+        FilledButton(onPressed: loading ? null : _login, child: loading ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Sign in')),
+        const SizedBox(height: 28),
+        Row(children: [const Expanded(child: Divider()), Padding(padding: const EdgeInsets.symmetric(horizontal: 18), child: Text('or', style: TextStyle(color: AppTheme.textMuted))), const Expanded(child: Divider())]),
+        const SizedBox(height: 24),
+        OutlinedButton(onPressed: () => _go('register'), child: const Text('Create an account')),
+      ],
+    );
+  }
+
+  Widget _back(VoidCallback action) => Align(alignment: Alignment.centerLeft, child: IconButton(onPressed: action, tooltip: 'Back', icon: const Icon(Icons.arrow_back_rounded), constraints: const BoxConstraints(minWidth: 48, minHeight: 48)));
+
+  Widget _fieldLabel(String text) => Padding(padding: const EdgeInsets.only(bottom: 7), child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)));
+
+  Widget _passwordField(TextEditingController controller, bool visible, VoidCallback toggle, {ValueChanged<String>? onSubmitted}) {
+    return TextField(
+      controller: controller,
+      obscureText: !visible,
+      textInputAction: onSubmitted == null ? TextInputAction.next : TextInputAction.done,
+      autofillHints: const [AutofillHints.password],
+      onSubmitted: onSubmitted,
+      decoration: InputDecoration(prefixIcon: const Icon(Icons.lock_outline_rounded), suffixIcon: IconButton(onPressed: toggle, tooltip: visible ? 'Hide password' : 'Show password', icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined))),
+    );
+  }
+
+  Widget _statusMessage() {
+    if (_message == null) return const SizedBox.shrink();
+    final color = _messageIsError ? AppTheme.primaryRed : AppTheme.primaryGreen;
+    return Semantics(
+      liveRegion: true,
+      child: Padding(
+        padding: const EdgeInsets.only(top: 14),
+        child: Row(crossAxisAlignment: CrossAxisAlignment.start, children: [Icon(_messageIsError ? Icons.error_outline : Icons.check_circle_outline, color: color, size: 20), const SizedBox(width: 8), Expanded(child: Text(_message!, style: TextStyle(color: color, fontWeight: FontWeight.w600)))]),
+      ),
+    );
+  }
+
+  String _roleName(UserRole role) => switch (role) {
+        UserRole.elderly => 'Receiving care',
+        UserRole.caregiver => 'Caregiver',
+        UserRole.family => 'Family member',
+        UserRole.admin => 'Administrator',
+      };
 }
+
+const _authHeadingStyle = TextStyle(
+  fontFamily: 'Georgia',
+  color: AppTheme.navy,
+  fontSize: 30,
+  height: 1.18,
+  fontWeight: FontWeight.w700,
+  letterSpacing: -0.5,
+);

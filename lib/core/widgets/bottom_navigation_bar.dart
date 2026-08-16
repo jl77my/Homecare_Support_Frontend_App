@@ -5,8 +5,7 @@ import '../../features/auth/providers/auth_provider.dart';
 import '../../features/family/providers/family_provider.dart';
 import '../../features/caregiver/providers/caregiver_provider.dart';
 import '../../features/elderly/providers/elderly_provider.dart';
-import '../../../core/models/enums.dart'; 
-import '../../../core/models/models.dart'; 
+import '../models/enums.dart';
 
 class CustomBottomNavigationBar extends ConsumerWidget {
   final String activeTab;
@@ -17,18 +16,6 @@ class CustomBottomNavigationBar extends ConsumerWidget {
     required this.activeTab,
     required this.onTabSelected,
   });
-
-  int _calculateUnreadCount(List<ChatMessage> msgs, String? lastReadId, String currentUserId) {
-    if (msgs.isEmpty) return 0;
-    int count = 0;
-    for (int i = msgs.length - 1; i >= 0; i--) {
-      if (msgs[i].id == lastReadId) break;
-      if (msgs[i].senderId != currentUserId) {
-        count++;
-      }
-    }
-    return count;
-  }
 
   @override
   Widget build(BuildContext context, WidgetRef ref) {
@@ -46,15 +33,11 @@ class CustomBottomNavigationBar extends ConsumerWidget {
 
     if (isFamily) {
       final familyState = ref.watch(familyDashboardProvider);
-      final activeElderlyId = familyState.selectedElderlyId;
-      final lastReadId = familyState.lastReadMessages[activeElderlyId];
-      unreadChats = _calculateUnreadCount(familyState.currentChatMessages, lastReadId, user.id);
+      unreadChats = familyState.unreadCounts.values.fold(0, (sum, count) => sum + count);
       pendingTasks = familyState.tasks.where((t) => t.status == TaskStatus.pending).length;
     } else if (isCaregiver) {
       final caregiverState = ref.watch(caregiverProvider);
-      final activeElderlyId = caregiverState.activeElderlyId;
-      final lastReadId = caregiverState.lastReadMessages[activeElderlyId];
-      unreadChats = _calculateUnreadCount(caregiverState.currentChatMessages, lastReadId, user.id);
+      unreadChats = caregiverState.unreadCounts.values.fold(0, (sum, count) => sum + count);
       pendingTasks = caregiverState.tasks.where((t) => t.status == TaskStatus.pending).length;
     }
 

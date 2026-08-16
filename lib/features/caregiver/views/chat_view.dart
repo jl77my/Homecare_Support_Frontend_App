@@ -83,12 +83,17 @@ class _ChatViewState extends ConsumerState<ChatView> {
     if (activeChannelData != null && messages.isNotEmpty) {
       final latestMsg = messages.last;
       final activeElderlyId = activeChannelData['elderlyId'] ?? '';
-      
-      if (isFamily && familyState.lastReadMessages[activeElderlyId] != latestMsg.id) {
+
+      final unreadCount = isFamily
+          ? familyState.unreadCounts[activeElderlyId] ?? 0
+          : caregiverState.unreadCounts[activeElderlyId] ?? 0;
+      final loadedActiveChannel = latestMsg.elderlyId == activeElderlyId;
+
+      if (loadedActiveChannel && unreadCount > 0 && isFamily) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(familyDashboardProvider.notifier).markChatAsRead(activeElderlyId);
         });
-      } else if (!isFamily && caregiverState.lastReadMessages[activeElderlyId] != latestMsg.id) {
+      } else if (loadedActiveChannel && unreadCount > 0 && !isFamily) {
         WidgetsBinding.instance.addPostFrameCallback((_) {
           ref.read(caregiverProvider.notifier).markChatAsRead(activeElderlyId);
         });
@@ -127,19 +132,9 @@ class _ChatViewState extends ConsumerState<ChatView> {
                     final elderlyId = senior['elderlyId'] ?? '';
                     final photoUrl = senior['profilePhotoUrl'] ?? '';
                     
-                    final String? lastReadId = isFamily 
-                        ? familyState.lastReadMessages[elderlyId] 
-                        : caregiverState.lastReadMessages[elderlyId];
-
-                    int unreadCount = 0;
-                    if (messages.isNotEmpty && messages.first.elderlyId == elderlyId) {
-                      for (int i = messages.length - 1; i >= 0; i--) {
-                        if (messages[i].id == lastReadId) break;
-                        if (messages[i].senderId != currentUser?.id) unreadCount++;
-                      }
-                    } else {
-                      unreadCount = lastReadId == null ? 1 : 0;
-                    }
+                    final int unreadCount = isFamily
+                        ? familyState.unreadCounts[elderlyId] ?? 0
+                        : caregiverState.unreadCounts[elderlyId] ?? 0;
 
                     final bool hasUnread = unreadCount > 0;
 

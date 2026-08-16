@@ -1,0 +1,106 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1600" height="1000" viewBox="0 0 1600 1000">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#d5f2f3"/>
+      <stop offset="0.5" stop-color="#f4fafa"/>
+      <stop offset="1" stop-color="#d8f5ed"/>
+    </linearGradient>
+    <linearGradient id="hero" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#087e8b"/>
+      <stop offset="1" stop-color="#0b5563"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="160%">
+      <feDropShadow dx="0" dy="18" stdDeviation="22" flood-color="#0b5563" flood-opacity="0.16"/>
+    </filter>
+    <style>
+      .title{font:800 30px Arial,sans-serif;fill:#12343b}.h2{font:800 20px Arial,sans-serif;fill:#12343b}.body{font:400 14px Arial,sans-serif;fill:#526a70}.label{font:700 11px Arial,sans-serif;fill:#526a70;letter-spacing:.6px}.white{fill:#fff}.line{stroke:#d5e5e7;stroke-width:1.5}.icon{fill:none;stroke:currentColor;stroke-width:2.5;stroke-linecap:round;stroke-linejoin:round}
+    </style>
+  </defs>
+  <rect width="1600" height="1000" fill="url(#bg)"/>
+  <text x="800" y="62" text-anchor="middle" class="title" font-size="34">HomeCare UI redesign</text>
+  <text x="800" y="92" text-anchor="middle" class="body" font-size="16">Calm, accessible support for seniors, caregivers and families</text>
+
+  <!-- Role selection -->
+  <g transform="translate(90 130)">
+    <rect width="420" height="790" rx="42" fill="#fff" stroke="#d5e5e7" stroke-width="2"/>
+    <rect x="18" y="18" width="384" height="754" rx="30" fill="#f4fafa"/>
+    <rect x="42" y="46" width="56" height="56" rx="18" fill="#087e8b"/>
+    <path d="M70 83c-14-8-18-16-12-22 4-4 10-2 12 3 2-5 8-7 12-3 6 6 2 14-12 22z" fill="#fff"/>
+    <text x="42" y="136" class="title">HomeCare</text>
+    <text x="42" y="160" class="body">One care circle. Clearer days.</text>
+    <rect x="34" y="190" width="352" height="540" rx="26" fill="#fff" stroke="#d5e5e7"/>
+    <text x="58" y="236" class="h2">How will you use HomeCare?</text>
+    <text x="58" y="262" class="body">Choose your role to get started.</text>
+
+    <g transform="translate(58 292)">
+      <rect width="304" height="102" rx="20" fill="#fff8ed" stroke="#e6c699"/>
+      <rect x="16" y="20" width="58" height="58" rx="17" fill="#f4e5d1"/>
+      <circle cx="45" cy="40" r="10" fill="none" stroke="#a45a0a" stroke-width="3"/>
+      <path d="M28 69c4-15 30-15 34 0M38 50l-5 12M52 50l5 12" fill="none" stroke="#a45a0a" stroke-width="3" stroke-linecap="round"/>
+      <text x="92" y="42" class="h2" font-size="18">Senior</text>
+      <text x="92" y="65" class="body" font-size="12">Large controls and one-tap help</text>
+      <path d="M276 45l8 7-8 7" fill="none" stroke="#526a70" stroke-width="2.5"/>
+    </g>
+    <g transform="translate(58 408)">
+      <rect width="304" height="102" rx="20" fill="#edf9fa" stroke="#aadadd"/>
+      <rect x="16" y="20" width="58" height="58" rx="17" fill="#d5f2f3"/>
+      <path d="M36 37h18v24H36zM40 32h10v8H40zM31 49h28M45 42v14M39 49h12" fill="none" stroke="#087e8b" stroke-width="2.5" stroke-linejoin="round"/>
+      <text x="92" y="42" class="h2" font-size="18">Caregiver</text>
+      <text x="92" y="65" class="body" font-size="12">Vitals, reports and care tasks</text>
+      <path d="M276 45l8 7-8 7" fill="none" stroke="#526a70" stroke-width="2.5"/>
+    </g>
+    <g transform="translate(58 524)">
+      <rect width="304" height="102" rx="20" fill="#effaf6" stroke="#b8e6d8"/>
+      <rect x="16" y="20" width="58" height="58" rx="17" fill="#d8f5ed"/>
+      <circle cx="37" cy="42" r="8" fill="none" stroke="#087a55" stroke-width="2.5"/>
+      <circle cx="55" cy="42" r="8" fill="none" stroke="#087a55" stroke-width="2.5"/>
+      <path d="M24 67c2-12 23-12 25 0M42 67c2-12 23-12 25 0" fill="none" stroke="#087a55" stroke-width="2.5"/>
+      <text x="92" y="42" class="h2" font-size="18">Family</text>
+      <text x="92" y="65" class="body" font-size="12">Health updates and care circle</text>
+      <path d="M276 45l8 7-8 7" fill="none" stroke="#526a70" stroke-width="2.5"/>
+    </g>
+    <text x="210" y="686" text-anchor="middle" fill="#087e8b" font-family="Arial" font-size="14" font-weight="700">Already have an account? Sign in</text>
+  </g>
+
+  <!-- Caregiver dashboard -->
+  <g transform="translate(590 130)">
+    <rect width="420" height="790" rx="42" fill="#fff" stroke="#d5e5e7" stroke-width="2"/>
+    <rect x="18" y="18" width="384" height="754" rx="30" fill="#f4fafa"/>
+    <rect x="34" y="36" width="42" height="42" rx="14" fill="#087e8b"/>
+    <path d="M55 65c-11-6-14-12-9-17 3-3 8-1 9 3 2-4 6-6 9-3 5 5 2 11-9 17z" fill="#fff"/>
+    <text x="88" y="55" class="h2" font-size="18">HomeCare</text><text x="88" y="72" class="body" font-size="10">Your connected care circle</text>
+    <circle cx="366" cy="57" r="20" fill="#d5f2f3"/><text x="366" y="62" text-anchor="middle" fill="#073f47" font-family="Arial" font-weight="800">JL</text>
+    <text x="34" y="120" class="title" font-size="25">Good morning, Jia Li</text><text x="34" y="145" class="body">Here is today’s care overview.</text>
+    <rect x="34" y="166" width="352" height="76" rx="20" fill="#fff" stroke="#d5e5e7"/>
+    <circle cx="70" cy="204" r="22" fill="#d5f2f3"/><text x="70" y="210" text-anchor="middle" fill="#073f47" font-family="Arial" font-size="13" font-weight="800">MT</text>
+    <text x="105" y="198" class="h2" font-size="16">Margaret Tan</text><circle cx="110" cy="218" r="4" fill="#087a55"/><text x="120" y="222" class="body" font-size="11">Connected · Synced now</text>
+
+    <g transform="translate(34 260)"><rect width="110" height="132" rx="20" fill="#fff" stroke="#d5e5e7"/><circle cx="24" cy="27" r="15" fill="#fbeaea"/><path d="M24 33c-8-4-10-9-7-13 2-2 6-1 7 2 1-3 5-4 7-2 4 4 1 9-7 13z" fill="#c93535"/><text x="14" y="62" class="label">HEART RATE</text><text x="14" y="95" class="title" font-size="25">72</text><text x="61" y="94" class="body" font-size="10">BPM</text><text x="14" y="116" class="body" font-size="10">Normal range</text></g>
+    <g transform="translate(155 260)"><rect width="110" height="132" rx="20" fill="#fff" stroke="#d5e5e7"/><circle cx="24" cy="27" r="15" fill="#e8f7f7"/><path d="M15 28h18M17 22h14M19 34h10" stroke="#087e8b" stroke-width="2"/><text x="14" y="62" class="label">PRESSURE</text><text x="14" y="95" class="title" font-size="21">120/80</text><text x="14" y="116" class="body" font-size="10">9:10 AM</text></g>
+    <g transform="translate(276 260)"><rect width="110" height="132" rx="20" fill="#fff" stroke="#d5e5e7"/><circle cx="24" cy="27" r="15" fill="#d8f5ed"/><path d="M24 17c8 11 9 14 9 18a9 9 0 01-18 0c0-4 1-7 9-18z" fill="none" stroke="#087a55" stroke-width="2"/><text x="14" y="62" class="label">GLUCOSE</text><text x="14" y="95" class="title" font-size="25">95</text><text x="54" y="94" class="body" font-size="9">mg/dL</text><text x="14" y="116" class="body" font-size="10">Stable</text></g>
+
+    <rect x="34" y="410" width="352" height="186" rx="22" fill="url(#hero)"/>
+    <rect x="54" y="432" width="126" height="26" rx="13" fill="#ffffff" fill-opacity=".16"/><text x="117" y="450" text-anchor="middle" class="white" font-family="Arial" font-size="10" font-weight="800">HEALTH INSIGHT</text>
+    <text x="54" y="493" class="white" font-family="Arial" font-size="23" font-weight="800">Vitals look stable</text><text x="54" y="521" class="white" opacity=".88" font-family="Arial" font-size="12">No unusual pattern was detected.</text>
+    <rect x="54" y="545" width="148" height="38" rx="14" fill="#fff"/><text x="128" y="569" text-anchor="middle" fill="#0b5563" font-family="Arial" font-size="12" font-weight="700">View health trend</text>
+    <rect x="34" y="616" width="352" height="86" rx="20" fill="#fff" stroke="#d5e5e7"/><text x="54" y="644" class="h2" font-size="16">Next up</text><circle cx="58" cy="672" r="5" fill="#087e8b"/><text x="74" y="669" class="h2" font-size="13">Morning medication</text><text x="74" y="687" class="body" font-size="10">10:30 AM · Amlodipine 5 mg</text>
+    <rect x="18" y="714" width="384" height="58" rx="0" fill="#fff"/><g fill="#526a70" font-family="Arial" font-size="9" text-anchor="middle"><text x="56" y="759" fill="#087e8b" font-weight="800">Overview</text><text x="130" y="759">Reports</text><text x="205" y="759">Reminders</text><text x="280" y="759">Tasks</text><text x="355" y="759">Connect</text></g><g fill="none" stroke="#526a70" stroke-width="2"><rect x="47" y="728" width="18" height="15" rx="3" stroke="#087e8b"/><path d="M122 730h16v13h-16zM197 730h16v13h-16zM272 730h16v13h-16zM347 731h16v12h-16z"/></g>
+  </g>
+
+  <!-- Senior dashboard -->
+  <g transform="translate(1090 130)">
+    <rect width="420" height="790" rx="42" fill="#fff" stroke="#d5e5e7" stroke-width="2"/>
+    <rect x="18" y="18" width="384" height="754" rx="30" fill="#f4fafa"/>
+    <rect x="34" y="36" width="42" height="42" rx="14" fill="#087e8b"/><path d="M55 65c-11-6-14-12-9-17 3-3 8-1 9 3 2-4 6-6 9-3 5 5 2 11-9 17z" fill="#fff"/>
+    <text x="88" y="55" class="h2" font-size="18">HomeCare</text><text x="88" y="72" class="body" font-size="10">Your connected care circle</text>
+    <text x="34" y="120" class="title" font-size="25">Good morning, Margaret</text><text x="34" y="145" class="body">Your care circle is connected.</text>
+    <rect x="34" y="166" width="352" height="126" rx="24" fill="#c93535"/><circle cx="90" cy="229" r="37" fill="#fff" fill-opacity=".14"/><text x="90" y="239" text-anchor="middle" class="white" font-family="Arial" font-size="27" font-weight="900">SOS</text><text x="144" y="216" class="white" font-family="Arial" font-size="24" font-weight="900">Emergency help</text><text x="144" y="243" class="white" font-family="Arial" font-size="14">Tap to alert your care team.</text>
+    <rect x="34" y="310" width="352" height="244" rx="24" fill="#fff" stroke="#d5e5e7"/><circle cx="62" cy="346" r="18" fill="#d5f2f3"/><path d="M57 342a5 5 0 0110 0v6l4 5H53l4-5z" fill="none" stroke="#087e8b" stroke-width="2"/><text x="92" y="353" class="h2" font-size="19">Your next reminder</text>
+    <rect x="54" y="378" width="312" height="86" rx="19" fill="#d5f2f3"/><rect x="68" y="393" width="56" height="56" rx="17" fill="#fff"/><path d="M88 407h16v30H88zM88 420h16" fill="none" stroke="#087e8b" stroke-width="2.5"/><text x="142" y="414" class="h2" font-size="19">Take Amlodipine</text><text x="142" y="440" class="body" font-size="14">5 mg · Today at 10:30 AM</text>
+    <rect x="54" y="482" width="312" height="52" rx="17" fill="#087e8b"/><path d="M116 507l7 7 13-15" fill="none" stroke="#fff" stroke-width="3"/><text x="218" y="514" text-anchor="middle" class="white" font-family="Arial" font-size="16" font-weight="700">I have taken it</text>
+    <rect x="34" y="572" width="352" height="160" rx="24" fill="#fff" stroke="#d5e5e7"/><text x="54" y="608" class="h2" font-size="19">How are you feeling?</text>
+    <g transform="translate(54 626)"><rect width="92" height="82" rx="18" fill="#effaf6" stroke="#b8e6d8"/><circle cx="46" cy="30" r="13" fill="none" stroke="#087a55" stroke-width="2.5"/><path d="M38 28h1M53 28h1M39 36c5 5 10 5 15 0" stroke="#087a55" stroke-width="2" fill="none"/><text x="46" y="69" text-anchor="middle" fill="#087a55" font-family="Arial" font-size="13" font-weight="700">Good</text></g>
+    <g transform="translate(164 626)"><rect width="92" height="82" rx="18" fill="#fff8ed" stroke="#e6c699"/><circle cx="46" cy="30" r="13" fill="none" stroke="#a45a0a" stroke-width="2.5"/><path d="M38 28h1M53 28h1M39 37h15" stroke="#a45a0a" stroke-width="2"/><text x="46" y="69" text-anchor="middle" fill="#a45a0a" font-family="Arial" font-size="13" font-weight="700">Okay</text></g>
+    <g transform="translate(274 626)"><rect width="92" height="82" rx="18" fill="#fff2f2" stroke="#edbaba"/><circle cx="46" cy="30" r="13" fill="none" stroke="#c93535" stroke-width="2.5"/><path d="M38 28h1M53 28h1M39 40c5-5 10-5 15 0" stroke="#c93535" stroke-width="2" fill="none"/><text x="46" y="69" text-anchor="middle" fill="#c93535" font-family="Arial" font-size="13" font-weight="700">Unwell</text></g>
+  </g>
+</svg>

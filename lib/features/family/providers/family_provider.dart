@@ -20,7 +20,7 @@ class FamilyDashboardState {
   final bool isLoading;
   final String? errorMessage;
   final String? todayMood;
-  final Map<String, String> lastReadMessages; 
+  final Map<String, int> unreadCounts;
 
   const FamilyDashboardState({
     this.tasks = const [],
@@ -38,7 +38,7 @@ class FamilyDashboardState {
     this.isLoading = false,
     this.errorMessage,
     this.todayMood,
-    this.lastReadMessages = const {}, 
+    this.unreadCounts = const {},
   });
 
   FamilyDashboardState copyWith({
@@ -58,7 +58,7 @@ class FamilyDashboardState {
     String? errorMessage,
     bool clearError = false,
     String? todayMood,
-    Map<String, String>? lastReadMessages,
+    Map<String, int>? unreadCounts,
   }) {
     return FamilyDashboardState(
       tasks: tasks ?? this.tasks,
@@ -76,7 +76,7 @@ class FamilyDashboardState {
       isLoading: isLoading ?? this.isLoading,
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       todayMood: todayMood ?? this.todayMood,
-      lastReadMessages: lastReadMessages ?? this.lastReadMessages, 
+      unreadCounts: unreadCounts ?? this.unreadCounts,
     );
   }
 }
@@ -88,14 +88,32 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
   
   final FamilyService _service;
   final Ref _ref;
+  final Set<String> _markingReadChannels = <String>{};
   
   String? get _token => _ref.read(authProvider).token;
 
-  void markChatAsRead(String elderlyId) {
-    if (state.currentChatMessages.isNotEmpty) {
-      final updatedMap = Map<String, String>.from(state.lastReadMessages);
-      updatedMap[elderlyId] = state.currentChatMessages.last.id;
-      state = state.copyWith(lastReadMessages: updatedMap);
+  Future<void> markChatAsRead(String elderlyId) async {
+    final token = _token;
+    if (token == null || !_markingReadChannels.add(elderlyId)) return;
+
+    try {
+      final channelMessages = state.currentChatMessages
+          .where((message) => message.elderlyId == elderlyId)
+          .toList();
+      if (channelMessages.isEmpty) return;
+
+      final unreadCount = await _service.markChatAsRead(
+        token: token,
+        elderlyId: elderlyId,
+        lastReadMessageId: channelMessages.last.id,
+      );
+      final updatedCounts = Map<String, int>.from(state.unreadCounts);
+      updatedCounts[elderlyId] = unreadCount;
+      state = state.copyWith(unreadCounts: updatedCounts);
+    } catch (e) {
+      _handleException(e);
+    } finally {
+      _markingReadChannels.remove(elderlyId);
     }
   }
 
@@ -124,7 +142,12 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
     final token = _token;
     if (token == null) return;
     try {
-      final seniors = await _service.getLinkedElderly(token);
+      final results = await Future.wait([
+        _service.getLinkedElderly(token),
+        _service.getUnreadCounts(token),
+      ]);
+      final seniors = results[0] as List<Map<String, String>>;
+      final unreadCounts = results[1] as Map<String, int>;
       String currentActive = state.selectedElderlyId;
       if (currentActive.isEmpty && seniors.isNotEmpty) {
         currentActive = seniors.first['elderlyId'] ?? '';
@@ -132,6 +155,7 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
       state = state.copyWith(
         linkedSeniors: seniors,
         selectedElderlyId: currentActive,
+        unreadCounts: unreadCounts,
       );
       if (currentActive.isNotEmpty) {
         await fetchCareConnections();
@@ -342,7 +366,11 @@ class FamilyDashboardNotifier extends StateNotifier<FamilyDashboardState> {
   Future<void> fetchChatMessages(String elderlyId) async {
     final token = _token;
     if (token == null) return;
-    state = state.copyWith(isLoading: true, clearError: true);
+    state = state.copyWith(
+      currentChatMessages: const [],
+      isLoading: true,
+      clearError: true,
+    );
     try {
       final messages = await _service.getChatMessages(
         token: token,
