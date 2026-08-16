@@ -224,16 +224,16 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
         Align(alignment: Alignment.centerLeft, child: Chip(avatar: const Icon(Icons.person_outline, size: 20), label: Text(_roleName(_selectedRole)))),
         const SizedBox(height: 18),
         _fieldLabel('Full name'),
-        TextField(controller: _regName, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.name], decoration: const InputDecoration(prefixIcon: Icon(Icons.person_outline_rounded))),
+        TextField(controller: _regName, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.name], decoration: const InputDecoration(prefixIcon: Icon(Icons.person_outline_rounded), hintText: 'e.g. Maria Tan')),
         const SizedBox(height: 14),
         _fieldLabel('Email address'),
-        TextField(controller: _regEmail, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded))),
+        TextField(controller: _regEmail, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded), hintText: 'name@example.com')),
         const SizedBox(height: 14),
         _fieldLabel('Password'),
-        _passwordField(_regPassword, _showRegPassword, () => setState(() => _showRegPassword = !_showRegPassword)),
+        _passwordField(_regPassword, _showRegPassword, () => setState(() => _showRegPassword = !_showRegPassword), hintText: 'At least 6 characters'),
         const SizedBox(height: 14),
         _fieldLabel('Confirm password'),
-        _passwordField(_regConfirmPassword, _showRegPassword, () => setState(() => _showRegPassword = !_showRegPassword), onSubmitted: (_) => _register()),
+        _passwordField(_regConfirmPassword, _showRegPassword, () => setState(() => _showRegPassword = !_showRegPassword), hintText: 'Re-enter your password', onSubmitted: (_) => _register()),
         const SizedBox(height: 12),
         Row(crossAxisAlignment: CrossAxisAlignment.start, children: [
           Checkbox(value: _acceptedTerms, onChanged: loading ? null : (value) => setState(() => _acceptedTerms = value ?? false)),
@@ -263,10 +263,10 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
         const Text('Sign in to continue', style: TextStyle(fontSize: 17, color: AppTheme.textMuted)),
         const SizedBox(height: 36),
         _fieldLabel('Email address'),
-        TextField(controller: _loginEmail, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded))),
+        TextField(controller: _loginEmail, keyboardType: TextInputType.emailAddress, textInputAction: TextInputAction.next, autofillHints: const [AutofillHints.email], decoration: const InputDecoration(prefixIcon: Icon(Icons.mail_outline_rounded), hintText: 'name@example.com')),
         const SizedBox(height: 16),
         _fieldLabel('Password'),
-        _passwordField(_loginPassword, _showLoginPassword, () => setState(() => _showLoginPassword = !_showLoginPassword), onSubmitted: (_) => _login()),
+        _passwordField(_loginPassword, _showLoginPassword, () => setState(() => _showLoginPassword = !_showLoginPassword), hintText: 'Enter your password', onSubmitted: (_) => _login()),
         _statusMessage(),
         const SizedBox(height: 30),
         FilledButton(onPressed: loading ? null : _login, child: loading ? const SizedBox.square(dimension: 22, child: CircularProgressIndicator(strokeWidth: 2, color: Colors.white)) : const Text('Sign in')),
@@ -282,14 +282,14 @@ class _AuthFlowViewState extends ConsumerState<AuthFlowView> {
 
   Widget _fieldLabel(String text) => Padding(padding: const EdgeInsets.only(bottom: 7), child: Text(text, style: const TextStyle(fontWeight: FontWeight.w600)));
 
-  Widget _passwordField(TextEditingController controller, bool visible, VoidCallback toggle, {ValueChanged<String>? onSubmitted}) {
+  Widget _passwordField(TextEditingController controller, bool visible, VoidCallback toggle, {required String hintText, ValueChanged<String>? onSubmitted}) {
     return TextField(
       controller: controller,
       obscureText: !visible,
       textInputAction: onSubmitted == null ? TextInputAction.next : TextInputAction.done,
       autofillHints: const [AutofillHints.password],
       onSubmitted: onSubmitted,
-      decoration: InputDecoration(prefixIcon: const Icon(Icons.lock_outline_rounded), suffixIcon: IconButton(onPressed: toggle, tooltip: visible ? 'Hide password' : 'Show password', icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined))),
+      decoration: InputDecoration(hintText: hintText, prefixIcon: const Icon(Icons.lock_outline_rounded), suffixIcon: IconButton(onPressed: toggle, tooltip: visible ? 'Hide password' : 'Show password', icon: Icon(visible ? Icons.visibility_off_outlined : Icons.visibility_outlined))),
     );
   }
 

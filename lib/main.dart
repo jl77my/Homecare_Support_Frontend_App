@@ -130,14 +130,14 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                       padding: const EdgeInsets.only(right: 16, left: 4),
                       child: CircleAvatar(
                         radius: 16,
-                        backgroundColor: const Color(0xFF0F172A),
+                        backgroundColor: const Color(0xFFE5F2FF),
                         backgroundImage: user.profilePhotoUrl != null && user.profilePhotoUrl!.startsWith('data:image')
                             ? MemoryImage(base64Decode(user.profilePhotoUrl!.split(',')[1]))
                             : (user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) as ImageProvider : null),
                         child: user.profilePhotoUrl == null
                             ? Text(
                                 user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                                style: const TextStyle(color: Colors.white, fontSize: 12, fontWeight: FontWeight.bold),
+                                style: const TextStyle(color: AppTheme.primaryBlue, fontSize: 12, fontWeight: FontWeight.bold),
                               )
                             : null,
                       ),
@@ -145,27 +145,27 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                   ),
                 ],
               ),
-              body: Stack(
-                children: [
-                  SafeArea(
-                    child: Padding(
-                      padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                      child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile' && _activeTab != 'account_settings'
-                          ? const ElderlyView()
-                          : _buildMainContent(user.role),
+              body: LayoutBuilder(
+                builder: (context, constraints) => Stack(
+                  children: [
+                    SafeArea(
+                      child: Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16.0),
+                        child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile' && _activeTab != 'account_settings'
+                            ? const ElderlyView()
+                            : _buildMainContent(user.role),
+                      ),
                     ),
-                  ),
-                  const GlobalReminderOverlay(),
-                  if (user.role.toLowerCase() != 'elderly') const GlobalSosOverlay(),
-                ],
+                    if (user.role.toLowerCase() != 'elderly' && _activeTab != 'agent')
+                      DraggableCareAgentButton(
+                        availableSize: Size(constraints.maxWidth, constraints.maxHeight),
+                        onPressed: () => _setActiveTab('agent'),
+                      ),
+                    const GlobalReminderOverlay(),
+                    if (user.role.toLowerCase() != 'elderly') const GlobalSosOverlay(),
+                  ],
+                ),
               ),
-              floatingActionButton: user.role.toLowerCase() != 'elderly' && _activeTab != 'agent'
-                  ? FloatingActionButton.extended(
-                      onPressed: () => _setActiveTab('agent'),
-                      icon: const Icon(Icons.smart_toy_outlined),
-                      label: const Text('Care Agent'),
-                    )
-                  : null,
               bottomNavigationBar: user.role.toLowerCase() == 'elderly'
                   ? null
                   : CustomBottomNavigationBar(
@@ -211,5 +211,79 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                 onNavigateToReports: () => _setActiveTab('reports'),
               );
     }
+  }
+}
+
+class DraggableCareAgentButton extends StatefulWidget {
+  final Size availableSize;
+  final VoidCallback onPressed;
+
+  const DraggableCareAgentButton({
+    super.key,
+    required this.availableSize,
+    required this.onPressed,
+  });
+
+  @override
+  State<DraggableCareAgentButton> createState() => _DraggableCareAgentButtonState();
+}
+
+class _DraggableCareAgentButtonState extends State<DraggableCareAgentButton> {
+  static const double _buttonWidth = 148;
+  static const double _buttonHeight = 52;
+  static const double _edgePadding = 12;
+  Offset? _position;
+
+  Offset _clamp(Offset value) {
+    final maxX = (widget.availableSize.width - _buttonWidth - _edgePadding).clamp(_edgePadding, double.infinity).toDouble();
+    final maxY = (widget.availableSize.height - _buttonHeight - _edgePadding).clamp(_edgePadding, double.infinity).toDouble();
+    return Offset(
+      value.dx.clamp(_edgePadding, maxX).toDouble(),
+      value.dy.clamp(_edgePadding, maxY).toDouble(),
+    );
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    final initial = Offset(
+      widget.availableSize.width - _buttonWidth - 16,
+      widget.availableSize.height - _buttonHeight - 16,
+    );
+    final position = _clamp(_position ?? initial);
+
+    return Positioned(
+      left: position.dx,
+      top: position.dy,
+      width: _buttonWidth,
+      height: _buttonHeight,
+      child: Semantics(
+        button: true,
+        label: 'Open Care Agent. Drag to move this button.',
+        child: GestureDetector(
+          behavior: HitTestBehavior.opaque,
+          onPanUpdate: (details) => setState(() => _position = _clamp(position + details.delta)),
+          onTap: widget.onPressed,
+          child: Material(
+            color: AppTheme.primaryBlue,
+            elevation: 5,
+            shadowColor: AppTheme.primaryBlue.withOpacity(.25),
+            borderRadius: BorderRadius.circular(16),
+            child: const Padding(
+              padding: EdgeInsets.symmetric(horizontal: 12),
+              child: Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(Icons.drag_indicator_rounded, color: Colors.white, size: 19),
+                  SizedBox(width: 4),
+                  Icon(Icons.smart_toy_outlined, color: Colors.white, size: 20),
+                  SizedBox(width: 7),
+                  Text('Care Agent', style: TextStyle(color: Colors.white, fontWeight: FontWeight.w800)),
+                ],
+              ),
+            ),
+          ),
+        ),
+      ),
+    );
   }
 }

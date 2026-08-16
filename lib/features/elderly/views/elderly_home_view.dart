@@ -60,7 +60,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
               : 'We could not save your mood. Please try again.',
         ),
         backgroundColor:
-            saved ? const Color(0xFF0F172A) : const Color(0xFFB91C1C),
+            saved ? const Color(0xFF118A36) : const Color(0xFFB91C1C),
       ),
     );
   }
@@ -106,7 +106,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
     final activeElderlyId = ref.watch(authProvider).user?.id ?? '';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF7FBFF),
       body: state.isLoading
           ? const Center(child: CircularProgressIndicator())
           : !state.isLinked
@@ -467,7 +467,7 @@ class _ElderlyViewState extends ConsumerState<ElderlyView> {
                     label: const Text('Next'),
                     style: ElevatedButton.styleFrom(
                       minimumSize: const Size.fromHeight(48),
-                      backgroundColor: const Color(0xFF1D4ED8),
+                      backgroundColor: const Color(0xFF075DBB),
                       foregroundColor: Colors.white,
                       disabledBackgroundColor: const Color(0xFFE2E8F0),
                       disabledForegroundColor: const Color(0xFF64748B),

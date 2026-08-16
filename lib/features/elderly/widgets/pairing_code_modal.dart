@@ -111,7 +111,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                     _selectedRole = 'caregiver';
                     _generatedCode = null; // Reset code when switching roles
                   }),
-                  selectedColor: const Color(0xFF2563EB),
+                  selectedColor: const Color(0xFF075DBB),
                   labelStyle: TextStyle(color: _selectedRole == 'caregiver' ? Colors.white : const Color(0xFF0F172A)),
                 ),
               ),
@@ -127,7 +127,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                     _selectedRole = 'family';
                     _generatedCode = null; // Reset code when switching roles
                   }),
-                  selectedColor: const Color(0xFF2563EB),
+                  selectedColor: const Color(0xFF075DBB),
                   labelStyle: TextStyle(color: _selectedRole == 'family' ? Colors.white : const Color(0xFF0F172A)),
                 ),
               ),
@@ -142,7 +142,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
               decoration: BoxDecoration(
                 color: const Color(0xFFF8FAFC),
                 borderRadius: BorderRadius.circular(24),
-                border: Border.all(color: const Color(0xFF2563EB), width: 2),
+                border: Border.all(color: const Color(0xFF075DBB), width: 2),
               ),
               child: Column(
                 children: [
@@ -156,7 +156,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                     style: const TextStyle(
                       fontSize: 36,
                       fontWeight: FontWeight.w900,
-                      color: Color(0xFF2563EB),
+                      color: Color(0xFF075DBB),
                       letterSpacing: 4,
                     ),
                   ),
@@ -182,7 +182,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                       style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
                     ),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF075DBB),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -201,9 +201,9 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                       style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
                     ),
                     style: OutlinedButton.styleFrom(
-                      foregroundColor: const Color(0xFF0F172A),
+                      foregroundColor: const Color(0xFF075DBB),
                       padding: const EdgeInsets.symmetric(vertical: 16),
-                      side: const BorderSide(color: Color(0xFF0F172A), width: 2),
+                      side: const BorderSide(color: Color(0xFF075DBB), width: 2),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                     ),
                   ),
@@ -224,7 +224,7 @@ class _PairingCodeModalState extends ConsumerState<PairingCodeModal> {
                   style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5),
                 ),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF0F172A),
+                  backgroundColor: const Color(0xFF075DBB),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),

@@ -113,7 +113,7 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
         elevation: isElderly ? 4 : 0, 
         shape: RoundedRectangleBorder(
           borderRadius: BorderRadius.circular(20),
-          side: isElderly ? const BorderSide(color: Color(0xFF2563EB), width: 2) : BorderSide.none,
+          side: isElderly ? const BorderSide(color: Color(0xFF075DBB), width: 2) : BorderSide.none,
         ),
         margin: const EdgeInsets.only(bottom: 12),
         child: ListTile(
@@ -127,7 +127,7 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
             child: photoUrl.isEmpty
                 ? Icon(
                     targetRole == 'caregiver' ? Icons.medical_services : (targetRole == 'elderly' ? Icons.elderly : Icons.family_restroom), 
-                    color: targetRole == 'caregiver' ? const Color(0xFF2563EB) : (targetRole == 'elderly' ? const Color(0xFF16A34A) : const Color(0xFFEF4444)),
+                    color: targetRole == 'caregiver' ? const Color(0xFF075DBB) : (targetRole == 'elderly' ? const Color(0xFF16A34A) : const Color(0xFFEF4444)),
                     size: isElderly ? 28 : 20,
                   )
                 : null,
@@ -145,7 +145,7 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
     }
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
         leading: IconButton(icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)), onPressed: widget.onBack),
         title: Text(isElderly ? 'My Care Network' : 'Care Team Directory', style: const TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900)),
@@ -156,7 +156,7 @@ class _CareConnectionsViewState extends ConsumerState<CareConnectionsView> {
           ? const Center(child: CircularProgressIndicator())
           : RefreshIndicator(
               onRefresh: _fetchData,
-              color: const Color(0xFF2563EB),
+              color: const Color(0xFF075DBB),
               child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.all(20),

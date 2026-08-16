@@ -107,7 +107,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
                     ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(err ?? 'Failed to update password')));
                   }
                 },
-                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), padding: const EdgeInsets.symmetric(vertical: 16)),
+                style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF075DBB), padding: const EdgeInsets.symmetric(vertical: 16)),
                 child: const Text('UPDATE PASSWORD', style: TextStyle(fontWeight: FontWeight.bold, color: Colors.white)),
               ),
             ),
@@ -123,7 +123,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
     final isLoading = ref.watch(authProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
         leading: IconButton(
           icon: const Icon(Icons.arrow_back, color: Color(0xFF0F172A)),
@@ -143,11 +143,11 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
                   onTap: _pickImage,
                   child: CircleAvatar(
                     radius: 50,
-                    backgroundColor: const Color(0xFF0F172A),
+                    backgroundColor: const Color(0xFFE5F2FF),
                     backgroundImage: _profilePhotoUrl != null && _profilePhotoUrl!.startsWith('data:image')
                         ? MemoryImage(base64Decode(_profilePhotoUrl!.split(',')[1]))
                         : (_profilePhotoUrl != null ? NetworkImage(_profilePhotoUrl!) as ImageProvider : null),
-                    child: _profilePhotoUrl == null ? const Icon(Icons.person, size: 50, color: Colors.white) : null,
+                    child: _profilePhotoUrl == null ? const Icon(Icons.person, size: 50, color: Color(0xFF075DBB)) : null,
                   ),
                 ),
                 if (_isEditing)
@@ -156,7 +156,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
                     right: 0,
                     child: CircleAvatar(
                       radius: 18,
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF075DBB),
                       child: IconButton(
                         icon: const Icon(Icons.camera_alt, size: 16, color: Colors.white),
                         onPressed: _pickImage,
@@ -203,7 +203,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
             ListTile(
               tileColor: Colors.white,
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16), side: const BorderSide(color: Color(0xFFE2E8F0))),
-              leading: const Icon(Icons.lock_outline, color: Color(0xFF2563EB)),
+              leading: const Icon(Icons.lock_outline, color: Color(0xFF075DBB)),
               title: const Text('Change Password', style: TextStyle(fontWeight: FontWeight.bold)),
               trailing: const Icon(Icons.chevron_right),
               onTap: _showChangePasswordModal,
@@ -246,7 +246,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
                             }
                           },
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF22C55E),
+                      backgroundColor: const Color(0xFF075DBB),
                       padding: const EdgeInsets.symmetric(vertical: 18),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                     ),
@@ -263,7 +263,7 @@ class _AccountSettingsViewState extends ConsumerState<AccountSettingsView> {
               child: ElevatedButton(
                 onPressed: () => setState(() => _isEditing = true),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: const Color(0xFF075DBB),
                   padding: const EdgeInsets.symmetric(vertical: 18),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),

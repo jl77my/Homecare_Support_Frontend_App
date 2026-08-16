@@ -5,19 +5,20 @@ class AppTheme {
   static const Color navy = Color(0xFF081D45);
   static const Color background = Color(0xFFF7FBFF);
   static const Color border = Color(0xFFD4E2F0);
-  static const Color primaryDark = Color(0xFF171717);
-  static const Color primaryBlue = Color(0xFF2563EB);
-  static const Color primaryRed = Color(0xFFEF4444);
-  static const Color primaryGreen = Color(0xFF10B981);
+  static const Color primaryDark = navy;
+  static const Color primaryBlue = Color(0xFF075DBB);
+  static const Color primaryBlueDark = Color(0xFF064D9B);
+  static const Color primaryRed = Color(0xFFD20D16);
+  static const Color primaryGreen = Color(0xFF118A36);
   static const Color primaryAmber = Color(0xFFF59E0B);
   
-  static const Color bgLight = Color(0xFFFDFDFD);
+  static const Color bgLight = background;
   static const Color surfaceCard = Colors.white;
-  static const Color borderLight = Color(0xFFF1F5F9);
-  static const Color borderSubtle = Color(0xFFE2E8F0);
+  static const Color borderLight = Color(0xFFE7F0F8);
+  static const Color borderSubtle = border;
   
-  static const Color textMain = Color(0xFF0F172A);
-  static const Color textMuted = Color(0xFF64748B);
+  static const Color textMain = navy;
+  static const Color textMuted = Color(0xFF425775);
 
   static ThemeData get lightTheme {
     return ThemeData(
@@ -26,7 +27,7 @@ class AppTheme {
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryBlue,
         primary: primaryBlue,
-        secondary: primaryDark,
+        secondary: primaryBlueDark,
         surface: surfaceCard,
         error: primaryRed,
       ),
@@ -55,7 +56,7 @@ class AppTheme {
       elevatedButtonTheme: ElevatedButtonThemeData(
         style: ElevatedButton.styleFrom(
           elevation: 0,
-          backgroundColor: primaryDark,
+          backgroundColor: primaryBlue,
           foregroundColor: Colors.white,
           padding: const EdgeInsets.symmetric(horizontal: 24, vertical: 16),
           shape: RoundedRectangleBorder(
@@ -68,10 +69,21 @@ class AppTheme {
           ),
         ),
       ),
+      filledButtonTheme: FilledButtonThemeData(
+        style: FilledButton.styleFrom(
+          minimumSize: const Size(48, 52),
+          backgroundColor: primaryBlue,
+          foregroundColor: Colors.white,
+          disabledBackgroundColor: const Color(0xFFA9C6E3),
+          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(14)),
+          textStyle: const TextStyle(fontSize: 16, fontWeight: FontWeight.w700),
+        ),
+      ),
       outlinedButtonTheme: OutlinedButtonThemeData(
         style: OutlinedButton.styleFrom(
           padding: const EdgeInsets.symmetric(horizontal: 20, vertical: 14),
-          side: const BorderSide(color: borderSubtle, width: 1.5),
+          foregroundColor: primaryBlue,
+          side: const BorderSide(color: primaryBlue, width: 1.5),
           shape: RoundedRectangleBorder(
             borderRadius: BorderRadius.circular(20),
           ),
@@ -83,7 +95,7 @@ class AppTheme {
       ),
       inputDecorationTheme: InputDecorationTheme(
         filled: true,
-        fillColor: const Color(0xFFF8FAFC),
+        fillColor: Colors.white,
         contentPadding: const EdgeInsets.symmetric(horizontal: 20, vertical: 16),
         border: OutlineInputBorder(
           borderRadius: BorderRadius.circular(20),

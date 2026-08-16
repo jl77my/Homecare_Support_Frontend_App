@@ -39,7 +39,7 @@ class ProfileView extends ConsumerWidget {
     final isFamily = role == 'family';
 
     return Scaffold(
-      backgroundColor: const Color(0xFFF8FAFC),
+      backgroundColor: const Color(0xFFF7FBFF),
       appBar: AppBar(
         title: const Text('My Profile', style: TextStyle(color: Color(0xFF0F172A), fontWeight: FontWeight.w900)),
         backgroundColor: Colors.white,
@@ -62,14 +62,14 @@ class ProfileView extends ConsumerWidget {
               children: [
                 CircleAvatar(
                   radius: 40,
-                  backgroundColor: const Color(0xFF0F172A),
+                  backgroundColor: const Color(0xFFE5F2FF),
                   backgroundImage: user.profilePhotoUrl != null && user.profilePhotoUrl!.startsWith('data:image')
                       ? MemoryImage(base64Decode(user.profilePhotoUrl!.split(',')[1]))
                       : (user.profilePhotoUrl != null ? NetworkImage(user.profilePhotoUrl!) as ImageProvider : null),
                   child: user.profilePhotoUrl == null
                       ? Text(
                           user.name.isNotEmpty ? user.name.substring(0, 1).toUpperCase() : 'U',
-                          style: const TextStyle(color: Colors.white, fontSize: 32, fontWeight: FontWeight.w900),
+                          style: const TextStyle(color: Color(0xFF075DBB), fontSize: 32, fontWeight: FontWeight.w900),
                         )
                       : null,
                 ),
@@ -106,7 +106,7 @@ class ProfileView extends ConsumerWidget {
               children: [
                 if (isElderly) ...[
                   ListTile(
-                    leading: const Icon(Icons.qr_code_2, color: Color(0xFF2563EB)),
+                    leading: const Icon(Icons.qr_code_2, color: Color(0xFF075DBB)),
                     title: const Text('Generate Invitation Code', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                     trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                     onTap: () => showModalBottomSheet(
@@ -120,7 +120,7 @@ class ProfileView extends ConsumerWidget {
                 ],
                 if (isCaregiver) ...[
                   ListTile(
-                    leading: const Icon(Icons.qr_code_scanner, color: Color(0xFF2563EB)),
+                    leading: const Icon(Icons.qr_code_scanner, color: Color(0xFF075DBB)),
                     title: const Text('Pair Additional Senior Patient', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                     trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const PairingView())),
@@ -129,7 +129,7 @@ class ProfileView extends ConsumerWidget {
                 ],
                 if (isFamily) ...[
                   ListTile(
-                    leading: const Icon(Icons.family_restroom, color: Color(0xFF2563EB)),
+                    leading: const Icon(Icons.family_restroom, color: Color(0xFF075DBB)),
                     title: const Text('Link Additional Senior Patient', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                     trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                     onTap: () => Navigator.of(context).push(MaterialPageRoute(builder: (context) => const FamilyPairingView())),
@@ -139,7 +139,7 @@ class ProfileView extends ConsumerWidget {
                 
                 // Account Settings Portal
                 ListTile(
-                  leading: const Icon(Icons.settings_outlined, color: Color(0xFF2563EB)),
+                  leading: const Icon(Icons.settings_outlined, color: Color(0xFF075DBB)),
                   title: const Text('Account Settings', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                   trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                   onTap: () {
@@ -156,7 +156,7 @@ class ProfileView extends ConsumerWidget {
 
                 // Care Connections Portal (Extracted back to separate view)
                 ListTile(
-                  leading: const Icon(Icons.diversity_1, color: Color(0xFF2563EB)),
+                  leading: const Icon(Icons.diversity_1, color: Color(0xFF075DBB)),
                   title: const Text('Care Connections', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                   trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                   onTap: () {

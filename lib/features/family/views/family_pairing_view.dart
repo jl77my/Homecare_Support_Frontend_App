@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/family_provider.dart';
+import '../../../core/theme/app_theme.dart';
 
 class FamilyPairingView extends ConsumerStatefulWidget {
   const FamilyPairingView({super.key});
@@ -57,11 +58,9 @@ class _FamilyPairingViewState extends ConsumerState<FamilyPairingView> {
     final isLoading = ref.watch(familyDashboardProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF171717),
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Link Family Senior', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF262626),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Link Family Senior'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -74,36 +73,36 @@ class _FamilyPairingViewState extends ConsumerState<FamilyPairingView> {
             const Text(
               'Enter Family Pairing Code',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+              style: TextStyle(color: AppTheme.navy, fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             const Text(
               'Ask your senior family member for their 6-digit family invitation code.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 13),
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 24),
             TextField(
               controller: _codeController,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 4, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: AppTheme.navy, fontSize: 24, letterSpacing: 4, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 hintText: 'FAM-4921',
-                hintStyle: const TextStyle(color: Color(0xFF525252), fontSize: 20),
+                hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 20),
                 filled: true,
-                fillColor: const Color(0xFF262626),
+                fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
             const SizedBox(height: 16),
             TextField(
               controller: _relationshipController,
-              style: const TextStyle(color: Colors.white),
+              style: const TextStyle(color: AppTheme.navy),
               decoration: InputDecoration(
                 labelText: 'Relationship (e.g. Son, Daughter, Spouse)',
-                labelStyle: const TextStyle(color: Color(0xFFA3A3A3)),
+                labelStyle: const TextStyle(color: AppTheme.textMuted),
                 filled: true,
-                fillColor: const Color(0xFF262626),
+                fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -111,7 +110,7 @@ class _FamilyPairingViewState extends ConsumerState<FamilyPairingView> {
             ElevatedButton(
               onPressed: isLoading ? null : _submitFamilyCode,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: AppTheme.primaryBlue,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),

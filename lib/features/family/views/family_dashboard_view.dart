@@ -62,7 +62,7 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
                     shape: BoxShape.circle,
                     border: Border.all(color: const Color(0xFFBFDBFE), width: 2),
                   ),
-                  child: const Icon(Icons.family_restroom, size: 56, color: Color(0xFF2563EB)),
+                  child: const Icon(Icons.family_restroom, size: 56, color: Color(0xFF075DBB)),
                 ),
                 const SizedBox(height: 20),
                 const Text(
@@ -86,7 +86,7 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
                     icon: const Icon(Icons.qr_code_scanner, size: 20),
                     label: const Text('ENTER PAIRING CODE NOW', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                     style: ElevatedButton.styleFrom(
-                      backgroundColor: const Color(0xFF2563EB),
+                      backgroundColor: const Color(0xFF075DBB),
                       foregroundColor: Colors.white,
                       padding: const EdgeInsets.symmetric(vertical: 16),
                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
@@ -107,16 +107,17 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
           margin: const EdgeInsets.only(bottom: 16),
           padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
           decoration: BoxDecoration(
-            color: const Color(0xFF0F172A),
+            color: Colors.white,
             borderRadius: BorderRadius.circular(20),
+            border: Border.all(color: const Color(0xFFD4E2F0)),
           ),
           child: Row(
             children: [
-              const Icon(Icons.person_search_outlined, color: Color(0xFF60A5FA), size: 20),
+              const Icon(Icons.person_search_outlined, color: Color(0xFF075DBB), size: 20),
               const SizedBox(width: 8),
               const Text(
                 'MONITORING:',
-                style: TextStyle(color: Color(0xFF94A3B8), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8),
+                style: TextStyle(color: Color(0xFF425775), fontSize: 10, fontWeight: FontWeight.w900, letterSpacing: 0.8),
               ),
               const SizedBox(width: 8),
               Expanded(
@@ -125,9 +126,9 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
                     value: linkedSeniors.any((s) => s['elderlyId'] == selectedElderlyId)
                         ? selectedElderlyId
                         : linkedSeniors.first['elderlyId'],
-                    dropdownColor: const Color(0xFF1E293B),
+                    dropdownColor: Colors.white,
                     isExpanded: true,
-                    style: const TextStyle(color: Colors.white, fontWeight: FontWeight.bold, fontSize: 13),
+                    style: const TextStyle(color: Color(0xFF081D45), fontWeight: FontWeight.bold, fontSize: 13),
                     items: linkedSeniors.map((senior) {
                       return DropdownMenuItem<String>(
                         value: senior['elderlyId'],
@@ -264,21 +265,21 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
                     const SizedBox(height: 12),
                     Container(
                       padding: const EdgeInsets.all(16),
-                      decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(24)),
+                      decoration: BoxDecoration(color: const Color(0xFFEAF4FE), borderRadius: BorderRadius.circular(24), border: Border.all(color: const Color(0xFFD4E2F0))),
                       child: Row(
                         children: [
                           Container(
                             padding: const EdgeInsets.all(10),
-                            decoration: BoxDecoration(color: Colors.white.withOpacity(0.1), borderRadius: BorderRadius.circular(16)),
-                            child: const Icon(Icons.favorite, color: Color(0xFFF87171), size: 22),
+                            decoration: BoxDecoration(color: Colors.white, borderRadius: BorderRadius.circular(16)),
+                            child: const Icon(Icons.favorite, color: Color(0xFFD20D16), size: 22),
                           ),
                           const SizedBox(width: 14),
                           Expanded(
                             child: Column(
                               crossAxisAlignment: CrossAxisAlignment.start,
                               children: [
-                                const Text('AVG. HEART RATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF94A3B8), letterSpacing: 0.8)),
-                                Text(latestVital != null ? '${latestVital.heartRate} BPM' : '-- BPM', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                                const Text('AVG. HEART RATE', style: TextStyle(fontSize: 9, fontWeight: FontWeight.w900, color: Color(0xFF425775), letterSpacing: 0.8)),
+                                Text(latestVital != null ? '${latestVital.heartRate} BPM' : '-- BPM', style: const TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF081D45))),
                               ],
                             ),
                           ),
@@ -314,7 +315,7 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
                   children: [
                     Row(
                       children: [
-                        const Icon(Icons.assignment_outlined, color: Color(0xFF2563EB), size: 20),
+                        const Icon(Icons.assignment_outlined, color: Color(0xFF075DBB), size: 20),
                         const SizedBox(width: 8),
                         Text('Latest Care Report (${familyState.totalReportsCount})', style: const TextStyle(fontSize: 15, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
                       ],
@@ -364,7 +365,7 @@ class _FamilyDashboardViewState extends ConsumerState<FamilyDashboardView> {
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.chat_bubble_outline, color: Color(0xFF2563EB), size: 18),
+                    Icon(Icons.chat_bubble_outline, color: Color(0xFF075DBB), size: 18),
                     SizedBox(width: 8),
                     Text('LATEST UPDATE FROM CAREGIVER', style: TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Color(0xFF0F172A), letterSpacing: 1.0)),
                   ],

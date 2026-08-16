@@ -6,6 +6,7 @@ import '../../features/family/providers/family_provider.dart';
 import '../../features/caregiver/providers/caregiver_provider.dart';
 import '../../features/elderly/providers/elderly_provider.dart';
 import '../models/enums.dart';
+import '../theme/app_theme.dart';
 
 class CustomBottomNavigationBar extends ConsumerWidget {
   final String activeTab;
@@ -42,16 +43,17 @@ class CustomBottomNavigationBar extends ConsumerWidget {
     }
 
     return Container(
-      margin: const EdgeInsets.all(16),
+      margin: const EdgeInsets.fromLTRB(16, 8, 16, 16),
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
-        borderRadius: BorderRadius.circular(32),
+        color: Colors.white,
+        borderRadius: BorderRadius.circular(24),
+        border: Border.all(color: AppTheme.border),
         boxShadow: const [
           BoxShadow(
-            color: Color(0x33000000),
-            blurRadius: 20,
-            offset: Offset(0, 10),
+            color: Color(0x14075DBB),
+            blurRadius: 16,
+            offset: Offset(0, 5),
           ),
         ],
       ),
@@ -66,7 +68,7 @@ class CustomBottomNavigationBar extends ConsumerWidget {
             'Reports',
             activeTab,
             badgeCount: unacknowledgedReports,
-            badgeColor: const Color(0xFF2563EB),
+            badgeColor: const Color(0xFF075DBB),
           ),
           _buildNavItem(
             context,
@@ -117,7 +119,7 @@ class CustomBottomNavigationBar extends ConsumerWidget {
         duration: const Duration(milliseconds: 200),
         padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 8),
         decoration: BoxDecoration(
-          color: isSelected ? Colors.white.withOpacity(0.15) : Colors.transparent,
+          color: isSelected ? const Color(0xFFE5F2FF) : Colors.transparent,
           borderRadius: BorderRadius.circular(20),
         ),
         child: Column(
@@ -128,7 +130,7 @@ class CustomBottomNavigationBar extends ConsumerWidget {
               children: [
                 Icon(
                   icon,
-                  color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                  color: isSelected ? AppTheme.primaryBlue : AppTheme.textMuted,
                   size: 22,
                 ),
                 if (badgeCount > 0)
@@ -157,7 +159,7 @@ class CustomBottomNavigationBar extends ConsumerWidget {
               style: TextStyle(
                 fontSize: 10,
                 fontWeight: isSelected ? FontWeight.w900 : FontWeight.w600,
-                color: isSelected ? Colors.white : const Color(0xFF94A3B8),
+                color: isSelected ? AppTheme.primaryBlue : AppTheme.textMuted,
               ),
             ),
           ],

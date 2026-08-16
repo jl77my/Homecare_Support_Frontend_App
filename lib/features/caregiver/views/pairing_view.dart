@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
 import '../providers/caregiver_provider.dart';
+import '../../../core/theme/app_theme.dart';
 
 class PairingView extends ConsumerStatefulWidget {
   const PairingView({super.key});
@@ -50,11 +51,9 @@ class _PairingViewState extends ConsumerState<PairingView> {
     final isLoading = ref.watch(caregiverProvider).isLoading;
 
     return Scaffold(
-      backgroundColor: const Color(0xFF171717),
+      backgroundColor: AppTheme.background,
       appBar: AppBar(
-        title: const Text('Link Senior Patient', style: TextStyle(color: Colors.white)),
-        backgroundColor: const Color(0xFF262626),
-        iconTheme: const IconThemeData(color: Colors.white),
+        title: const Text('Link Senior Patient'),
       ),
       body: Padding(
         padding: const EdgeInsets.all(24.0),
@@ -67,24 +66,24 @@ class _PairingViewState extends ConsumerState<PairingView> {
             const Text(
               'Enter Senior Pairing Code',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Colors.white, fontSize: 22, fontWeight: FontWeight.w900),
+              style: TextStyle(color: AppTheme.navy, fontSize: 22, fontWeight: FontWeight.w900),
             ),
             const SizedBox(height: 8),
             const Text(
               'Ask the senior or family member for their 6-digit invitation code.',
               textAlign: TextAlign.center,
-              style: TextStyle(color: Color(0xFFA3A3A3), fontSize: 13),
+              style: TextStyle(color: AppTheme.textMuted, fontSize: 13),
             ),
             const SizedBox(height: 24),
             TextField(
               controller: _codeController,
               textAlign: TextAlign.center,
-              style: const TextStyle(color: Colors.white, fontSize: 24, letterSpacing: 4, fontWeight: FontWeight.bold),
+              style: const TextStyle(color: AppTheme.navy, fontSize: 24, letterSpacing: 4, fontWeight: FontWeight.bold),
               decoration: InputDecoration(
                 hintText: 'HC-8921',
-                hintStyle: const TextStyle(color: Color(0xFF525252), fontSize: 20),
+                hintStyle: const TextStyle(color: AppTheme.textMuted, fontSize: 20),
                 filled: true,
-                fillColor: const Color(0xFF262626),
+                fillColor: Colors.white,
                 border: OutlineInputBorder(borderRadius: BorderRadius.circular(16)),
               ),
             ),
@@ -92,7 +91,7 @@ class _PairingViewState extends ConsumerState<PairingView> {
             ElevatedButton(
               onPressed: isLoading ? null : _submitCode,
               style: ElevatedButton.styleFrom(
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: AppTheme.primaryBlue,
                 padding: const EdgeInsets.symmetric(vertical: 16),
                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
               ),

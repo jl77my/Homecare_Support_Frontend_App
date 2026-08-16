@@ -288,6 +288,7 @@ class HealthPrediction {
 
 class CareAcknowledgement {
   final String id;
+  final String familyMemberId;
   final String familyName;
   final String? familyProfilePhoto; // NEW FIELD
   final String relationship;
@@ -296,6 +297,7 @@ class CareAcknowledgement {
 
   CareAcknowledgement({
     required this.id,
+    required this.familyMemberId,
     required this.familyName,
     this.familyProfilePhoto,
     required this.relationship,
@@ -306,6 +308,7 @@ class CareAcknowledgement {
   factory CareAcknowledgement.fromJson(Map<String, dynamic> json) {
     return CareAcknowledgement(
       id: json['Id'] ?? '',
+      familyMemberId: json['FamilyMemberId']?.toString() ?? json['familyMemberId']?.toString() ?? '',
       familyName: json['FamilyName'] ?? 'Family Member',
       familyProfilePhoto: json['FamilyProfilePhoto']?.toString() ?? json['familyProfilePhoto']?.toString(),
       relationship: json['Relationship'] ?? 'Relative',

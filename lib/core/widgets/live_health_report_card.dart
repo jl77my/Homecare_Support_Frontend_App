@@ -165,20 +165,21 @@ class LiveHealthReportCard extends StatelessWidget {
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
-                      color: const Color(0xFF0F172A),
+                      color: const Color(0xFFEAF4FE),
                       borderRadius: BorderRadius.circular(24),
+                      border: Border.all(color: const Color(0xFFD4E2F0)),
                     ),
                     child: Row(
                       children: [
                         Container(
                           padding: const EdgeInsets.all(10),
                           decoration: BoxDecoration(
-                            color: Colors.white.withOpacity(0.1),
+                            color: Colors.white,
                             borderRadius: BorderRadius.circular(16),
                           ),
                           child: const Icon(
                             Icons.favorite,
-                            color: Color(0xFFF87171),
+                            color: Color(0xFFD20D16),
                             size: 22,
                           ),
                         ),
@@ -192,7 +193,7 @@ class LiveHealthReportCard extends StatelessWidget {
                                 style: TextStyle(
                                   fontSize: 9,
                                   fontWeight: FontWeight.w900,
-                                  color: Color(0xFF94A3B8),
+                                  color: Color(0xFF425775),
                                   letterSpacing: 0.8,
                                 ),
                               ),
@@ -203,7 +204,7 @@ class LiveHealthReportCard extends StatelessWidget {
                                 style: const TextStyle(
                                   fontSize: 20,
                                   fontWeight: FontWeight.w900,
-                                  color: Colors.white,
+                                  color: Color(0xFF081D45),
                                 ),
                               ),
                             ],

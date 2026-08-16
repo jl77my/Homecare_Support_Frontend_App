@@ -122,7 +122,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
             Expanded(
               child: RefreshIndicator(
                 onRefresh: _refreshChannels,
-                color: const Color(0xFF2563EB),
+                color: const Color(0xFF075DBB),
                 child: ListView.separated(
                   physics: const AlwaysScrollableScrollPhysics(),
                   itemCount: channelsList.length,
@@ -157,13 +157,13 @@ class _ChatViewState extends ConsumerState<ChatView> {
                               child: photoUrl.isEmpty
                                   ? Text(
                                       (senior['name'] ?? 'S').substring(0, 1).toUpperCase(),
-                                      style: const TextStyle(color: Color(0xFF2563EB), fontWeight: FontWeight.bold, fontSize: 18),
+                                      style: const TextStyle(color: Color(0xFF075DBB), fontWeight: FontWeight.bold, fontSize: 18),
                                     )
                                   : null,
                             ),
                             title: Text('Senior Channel: ${senior['name'] ?? "Senior Patient"}', style: const TextStyle(fontWeight: FontWeight.w800, fontSize: 15)),
                             subtitle: const Text('Tap to enter private care team chat', style: TextStyle(fontSize: 12, color: Color(0xFF64748B))),
-                            trailing: const Icon(Icons.chevron_right, color: Color(0xFF2563EB)),
+                            trailing: const Icon(Icons.chevron_right, color: Color(0xFF075DBB)),
                             onTap: () {
                               setState(() => _activeChannel = senior);
                               if (elderlyId.isNotEmpty) {
@@ -276,7 +276,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
                                   margin: const EdgeInsets.only(bottom: 10),
                                   padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
                                   decoration: BoxDecoration(
-                                    color: isMe ? const Color(0xFF2563EB) : const Color(0xFFF8FAFC),
+                                    color: isMe ? const Color(0xFF075DBB) : const Color(0xFFF8FAFC),
                                     borderRadius: BorderRadius.circular(20),
                                     border: isMe ? null : Border.all(color: const Color(0xFFE2E8F0)),
                                   ),
@@ -316,7 +316,7 @@ class _ChatViewState extends ConsumerState<ChatView> {
             const SizedBox(width: 8),
             CircleAvatar(
               radius: 26,
-              backgroundColor: const Color(0xFF2563EB),
+              backgroundColor: const Color(0xFF075DBB),
               child: IconButton(
                 icon: const Icon(Icons.send, color: Colors.white, size: 20),
                 onPressed: () async {

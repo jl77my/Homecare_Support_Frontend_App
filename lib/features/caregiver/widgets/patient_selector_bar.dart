@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import '../../../core/theme/app_theme.dart';
 
 class PatientSelectorBar extends StatelessWidget {
   /// List of assigned elderly maps containing 'elderlyId' and 'name'
@@ -32,8 +33,9 @@ class PatientSelectorBar extends StatelessWidget {
       margin: const EdgeInsets.only(bottom: 16),
       padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
       decoration: BoxDecoration(
-        color: const Color(0xFF0F172A),
+        color: Colors.white,
         borderRadius: BorderRadius.circular(20),
+        border: Border.all(color: AppTheme.border),
         boxShadow: const [
           BoxShadow(
             color: Color(0x1A000000),
@@ -44,12 +46,12 @@ class PatientSelectorBar extends StatelessWidget {
       ),
       child: Row(
         children: [
-          const Icon(Icons.person_search_outlined, color: Color(0xFF60A5FA), size: 20),
+          const Icon(Icons.person_search_outlined, color: AppTheme.primaryBlue, size: 20),
           const SizedBox(width: 8),
           const Text(
             'ACTIVE SENIOR:',
             style: TextStyle(
-              color: Color(0xFF94A3B8),
+              color: AppTheme.textMuted,
               fontSize: 10,
               fontWeight: FontWeight.w900,
               letterSpacing: 0.8,
@@ -62,11 +64,11 @@ class PatientSelectorBar extends StatelessWidget {
                 value: assignedSeniors.any((s) => s['elderlyId'] == activeValue)
                     ? activeValue
                     : null,
-                dropdownColor: const Color(0xFF1E293B),
+                dropdownColor: Colors.white,
                 isExpanded: true,
-                icon: const Icon(Icons.arrow_drop_down, color: Color(0xFF94A3B8)),
+                icon: const Icon(Icons.arrow_drop_down, color: AppTheme.primaryBlue),
                 style: const TextStyle(
-                  color: Colors.white,
+                  color: AppTheme.navy,
                   fontWeight: FontWeight.bold,
                   fontSize: 13,
                 ),
@@ -93,7 +95,7 @@ class PatientSelectorBar extends StatelessWidget {
           ),
           const SizedBox(width: 4),
           IconButton(
-            icon: const Icon(Icons.add_circle_outline, color: Color(0xFF10B981), size: 22),
+            icon: const Icon(Icons.add_circle_outline, color: AppTheme.primaryBlue, size: 22),
             onPressed: onPairNewElderly,
             tooltip: 'Pair New Senior Patient',
           ),

@@ -88,7 +88,7 @@ class _TasksViewState extends ConsumerState<TasksView> {
         
         return RefreshIndicator(
             onRefresh: () => _handleRefresh(isFamily, activeElderlyId),
-            color: const Color(0xFF2563EB),
+            color: const Color(0xFF075DBB),
             child: ListView(
                 physics: const AlwaysScrollableScrollPhysics(),
                 padding: const EdgeInsets.only(bottom: 32),
@@ -145,7 +145,7 @@ class _TasksViewState extends ConsumerState<TasksView> {
                                     icon: const Icon(Icons.add, size: 18),
                                     label: const Text('ADD TASK', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                                     style: ElevatedButton.styleFrom(
-                                        backgroundColor: const Color(0xFF0F172A),
+                                        backgroundColor: const Color(0xFF075DBB),
                                         padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                         shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                                     ),
@@ -164,7 +164,7 @@ class _TasksViewState extends ConsumerState<TasksView> {
                                         label: const Center(child: Text('Active Tasks', style: TextStyle(fontWeight: FontWeight.bold))),
                                         selected: _showActiveTasks,
                                         onSelected: (val) => setState(() => _showActiveTasks = true),
-                                        selectedColor: const Color(0xFF2563EB),
+                                        selectedColor: const Color(0xFF075DBB),
                                         labelStyle: TextStyle(color: _showActiveTasks ? Colors.white : const Color(0xFF64748B)),
                                     ),
                                 ),
@@ -174,7 +174,7 @@ class _TasksViewState extends ConsumerState<TasksView> {
                                         label: const Center(child: Text('Task History', style: TextStyle(fontWeight: FontWeight.bold))),
                                         selected: !_showActiveTasks,
                                         onSelected: (val) => setState(() => _showActiveTasks = false),
-                                        selectedColor: const Color(0xFF2563EB),
+                                        selectedColor: const Color(0xFF075DBB),
                                         labelStyle: TextStyle(color: !_showActiveTasks ? Colors.white : const Color(0xFF64748B)),
                                     ),
                                 ),
@@ -267,7 +267,7 @@ class _TasksViewState extends ConsumerState<TasksView> {
                                                         const SizedBox(height: 4),
                                                         Text(
                                                             '📅 $formattedDate',
-                                                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF2563EB)),
+                                                             style: const TextStyle(fontSize: 11, fontWeight: FontWeight.w700, color: Color(0xFF075DBB)),
                                                         ),
                                                         if (task.description.isNotEmpty) ...[
                                                             const SizedBox(height: 2),
@@ -487,7 +487,7 @@ class _AddTaskModalState extends ConsumerState<_AddTaskModal> {
                         child: ElevatedButton(
                             onPressed: isLoading ? null : _submitTask,
                             style: ElevatedButton.styleFrom(
-                                backgroundColor: const Color(0xFF2563EB),
+                                backgroundColor: const Color(0xFF075DBB),
                                 padding: const EdgeInsets.symmetric(vertical: 16),
                                 shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                             ),

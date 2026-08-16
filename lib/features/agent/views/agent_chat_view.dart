@@ -225,7 +225,7 @@ class _AgentChatViewState extends ConsumerState<AgentChatView> {
       children: suggestions
           .map(
             (suggestion) => ActionChip(
-              avatar: const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF2563EB)),
+              avatar: const Icon(Icons.auto_awesome, size: 16, color: Color(0xFF075DBB)),
               label: Text(suggestion, style: const TextStyle(fontSize: 12)),
               onPressed: () => _send(elderlyId, suggestion: suggestion),
             ),
@@ -243,7 +243,7 @@ class _AgentChatViewState extends ConsumerState<AgentChatView> {
         margin: const EdgeInsets.only(top: 12),
         padding: const EdgeInsets.all(14),
         decoration: BoxDecoration(
-          color: isUser ? const Color(0xFF2563EB) : Colors.white,
+          color: isUser ? const Color(0xFF075DBB) : Colors.white,
           borderRadius: BorderRadius.only(
             topLeft: const Radius.circular(18),
             topRight: const Radius.circular(18),

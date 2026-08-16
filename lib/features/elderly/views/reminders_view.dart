@@ -106,7 +106,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
             
             return RefreshIndicator(
                 onRefresh: () => _handleRefresh(activeElderlyId),
-                color: const Color(0xFF2563EB),
+                color: const Color(0xFF075DBB),
                 child: ListView(
                         physics: const AlwaysScrollableScrollPhysics(),
                         padding: const EdgeInsets.only(bottom: 32),
@@ -163,7 +163,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                                                             icon: const Icon(Icons.add, size: 18),
                                                             label: const Text('NEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                                                             style: ElevatedButton.styleFrom(
-                                                                  backgroundColor: const Color(0xFF2563EB),
+                                                                  backgroundColor: const Color(0xFF075DBB),
                                                                   foregroundColor: Colors.white,
                                                                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                                                                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
@@ -235,7 +235,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                   ),
                   selected: isSelected,
                   onSelected: (_) => setState(() => _categoryFilter = cat),
-                  selectedColor: const Color(0xFF0F172A),
+                  selectedColor: const Color(0xFF075DBB),
                   backgroundColor: Colors.white,
                   shape: RoundedRectangleBorder(
                         borderRadius: BorderRadius.circular(16),
@@ -269,7 +269,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                                           const SizedBox(height: 4),
                                           Text(
                                                 '⏰ $formattedDateTime',
-                                                style: const TextStyle(color: Color(0xFF2563EB), fontSize: 14, fontWeight: FontWeight.w900),
+                                                style: const TextStyle(color: Color(0xFF075DBB), fontSize: 14, fontWeight: FontWeight.w900),
                                           ),
                                           const SizedBox(height: 4),
                                           Text(
@@ -322,7 +322,7 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                                           top: -10,
                                           right: 30,
                                           child: IconButton(
-                                                icon: const Icon(Icons.edit_outlined, color: Color(0xFF2563EB)),
+                                                icon: const Icon(Icons.edit_outlined, color: Color(0xFF075DBB)),
                                                 onPressed: () => _showAddReminderModal(activeElderlyId, existingReminder: rem),
                                           ),
                                     ),
@@ -582,7 +582,7 @@ class _AddReminderModalState extends ConsumerState<_AddReminderModal> {
                                           child: ElevatedButton(
                                                 onPressed: _submit,
                                                 style: ElevatedButton.styleFrom(
-                                                      backgroundColor: const Color(0xFF2563EB),
+                                                      backgroundColor: const Color(0xFF075DBB),
                                                       foregroundColor: Colors.white,
                                                       padding: const EdgeInsets.symmetric(vertical: 16),
                                                       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),

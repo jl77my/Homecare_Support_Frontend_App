@@ -109,7 +109,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
                 Container(
                   padding: const EdgeInsets.all(20),
                   decoration: BoxDecoration(color: const Color(0xFFEFF6FF), shape: BoxShape.circle, border: Border.all(color: const Color(0xFFBFDBFE), width: 2)),
-                  child: const Icon(Icons.qr_code_scanner, size: 56, color: Color(0xFF2563EB)),
+                  child: const Icon(Icons.qr_code_scanner, size: 56, color: Color(0xFF075DBB)),
                 ),
                 const SizedBox(height: 20),
                 const Text('No Senior Patient Assigned', textAlign: TextAlign.center, style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A))),
@@ -124,7 +124,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
                     },
                     icon: const Icon(Icons.link, size: 20),
                     label: const Text('PAIR SENIOR PATIENT NOW', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF075DBB), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
                   ),
                 ),
               ],
@@ -136,7 +136,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
 
     return RefreshIndicator(
       onRefresh: _handleRefresh,
-      color: const Color(0xFF2563EB),
+      color: const Color(0xFF075DBB),
       child: ListView(
         physics: const AlwaysScrollableScrollPhysics(),
         padding: const EdgeInsets.only(bottom: 32),
@@ -158,15 +158,15 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
           const SizedBox(height: 20),
           Container(
             padding: const EdgeInsets.all(24),
-            decoration: BoxDecoration(color: const Color(0xFF0F172A), borderRadius: BorderRadius.circular(36), boxShadow: const [BoxShadow(color: Color(0x25000000), blurRadius: 20, offset: Offset(0, 10))]),
+            decoration: BoxDecoration(color: const Color(0xFFEAF4FE), borderRadius: BorderRadius.circular(28), border: Border.all(color: const Color(0xFFD4E2F0)), boxShadow: const [BoxShadow(color: Color(0x12075DBB), blurRadius: 16, offset: Offset(0, 5))]),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
                 const Row(
                   children: [
-                    Icon(Icons.add_circle_outline, color: Colors.white, size: 22),
+                    Icon(Icons.add_circle_outline, color: Color(0xFF075DBB), size: 22),
                     SizedBox(width: 8),
-                    Text('Log New Vitals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Colors.white)),
+                    Text('Log New Vitals', style: TextStyle(fontSize: 20, fontWeight: FontWeight.w900, color: Color(0xFF081D45))),
                   ],
                 ),
                 const SizedBox(height: 16),
@@ -184,9 +184,9 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
                   width: double.infinity,
                   child: ElevatedButton.icon(
                     onPressed: caregiverState.isLoading ? null : _saveVitals,
-                    icon: caregiverState.isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Colors.white, strokeWidth: 2)) : const Icon(Icons.check, size: 20),
+                    icon: caregiverState.isLoading ? const SizedBox(width: 18, height: 18, child: CircularProgressIndicator(color: Color.fromARGB(255, 11, 11, 11), strokeWidth: 2)) : const Icon(Icons.check, size: 20),
                     label: const Text('SUBMIT RECORDS', style: TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
-                    style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF2563EB), foregroundColor: Colors.white, padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
+                    style: ElevatedButton.styleFrom(backgroundColor: const Color.fromARGB(255, 79, 143, 211), foregroundColor: const Color.fromARGB(255, 1, 1, 1), padding: const EdgeInsets.symmetric(vertical: 16), shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20))),
                   ),
                 ),
               ],
@@ -202,7 +202,7 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
                 Container(
                   padding: const EdgeInsets.all(12),
                   decoration: BoxDecoration(color: const Color(0xFFEFF6FF), borderRadius: BorderRadius.circular(16)),
-                  child: const Icon(Icons.file_present_rounded, color: Color(0xFF2563EB), size: 26),
+                  child: const Icon(Icons.file_present_rounded, color: Color(0xFF075DBB), size: 26),
                 ),
                 const SizedBox(width: 14),
                 Expanded(
@@ -228,19 +228,19 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.start,
       children: [
-        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.white54, letterSpacing: 0.8)),
+        Text(label, style: const TextStyle(fontSize: 10, fontWeight: FontWeight.w900, color: Colors.black87, letterSpacing: 0.8)),
         const SizedBox(height: 4),
         TextField(
           controller: controller,
           keyboardType: keyboardType,
-          style: const TextStyle(color: Colors.white, fontSize: 16, fontWeight: FontWeight.w800),
+          style: const TextStyle(color: Colors.black, fontSize: 16, fontWeight: FontWeight.w800),
           decoration: InputDecoration(
             hintText: hint,
-            hintStyle: const TextStyle(color: Colors.white38, fontSize: 16),
+            hintStyle: const TextStyle(color: Colors.black38, fontSize: 16),
             filled: true,
             fillColor: Colors.white.withOpacity(0.1),
             contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: Colors.white.withOpacity(0.1))),
+            enabledBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: BorderSide(color: const Color.fromARGB(255, 5, 5, 5).withOpacity(0.1))),
             focusedBorder: OutlineInputBorder(borderRadius: BorderRadius.circular(16), borderSide: const BorderSide(color: Color(0xFF3B82F6), width: 2)),
           ),
         ),
@@ -248,3 +248,4 @@ class _CaregiverStatusViewState extends ConsumerState<CaregiverStatusView> {
     );
   }
 }
+

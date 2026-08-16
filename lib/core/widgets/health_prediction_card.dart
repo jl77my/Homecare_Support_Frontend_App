@@ -80,7 +80,7 @@ class HealthPredictionCard extends StatelessWidget {
             Row(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFF2563EB)),
+                const Icon(Icons.lightbulb_outline, size: 16, color: Color(0xFF075DBB)),
                 const SizedBox(width: 7),
                 Expanded(child: Text(data.recommendations.first, style: const TextStyle(fontSize: 11, height: 1.4, color: Color(0xFF334155), fontWeight: FontWeight.w600))),
               ],
@@ -201,7 +201,7 @@ class HealthPredictionCard extends StatelessWidget {
       case 'high': return const _PredictionColors(Color(0xFFFEF2F2), Color(0xFFDC2626));
       case 'moderate': return const _PredictionColors(Color(0xFFFFF7ED), Color(0xFFD97706));
       case 'low': return const _PredictionColors(Color(0xFFF0FDF4), Color(0xFF16A34A));
-      default: return const _PredictionColors(Color(0xFFEFF6FF), Color(0xFF2563EB));
+      default: return const _PredictionColors(Color(0xFFEFF6FF), Color(0xFF075DBB));
     }
   }
 }

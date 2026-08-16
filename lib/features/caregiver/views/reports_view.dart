@@ -151,7 +151,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
       children: [
         RefreshIndicator(
           onRefresh: () => _handleRefresh(isFamily, activeElderlyId),
-          color: const Color(0xFF2563EB),
+          color: const Color(0xFF075DBB),
           child: ListView(
             physics: const AlwaysScrollableScrollPhysics(),
             padding: const EdgeInsets.only(bottom: 32),
@@ -209,7 +209,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                         icon: const Icon(Icons.add_a_photo, size: 16),
                         label: const Text('NEW REPORT', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),
                         style: ElevatedButton.styleFrom(
-                          backgroundColor: const Color(0xFF2563EB),
+                          backgroundColor: const Color(0xFF075DBB),
                           padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
                           shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                         ),
@@ -258,7 +258,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                   separatorBuilder: (_, __) => const SizedBox(height: 18),
                   itemBuilder: (context, index) {
                     final report = filteredReports[index];
-                    return _buildReportCard(report, isFamily, isCaregiver, activeElderlyId);
+                    return _buildReportCard(report, isFamily, isCaregiver, activeElderlyId, authUser?.id ?? '');
                   },
                 ),
             ],
@@ -309,15 +309,17 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
       ),
       selected: isSelected,
       onSelected: (_) => setState(() => _categoryFilter = cat),
-      selectedColor: const Color(0xFF2563EB),
+      selectedColor: const Color(0xFF075DBB),
       backgroundColor: const Color(0xFFF1F5F9),
       shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
       showCheckmark: false,
     );
   }
 
-  Widget _buildReportCard(CareReport report, bool isFamily, bool isCaregiver, String patientId) {
+  Widget _buildReportCard(CareReport report, bool isFamily, bool isCaregiver, String patientId, String currentFamilyMemberId) {
     final formattedDate = DateFormat('MMM d   hh:mm a').format(report.timestamp);
+    final alreadyAcknowledged = currentFamilyMemberId.isNotEmpty &&
+        report.acknowledgements.any((ack) => ack.familyMemberId == currentFamilyMemberId);
 
     return Container(
       padding: const EdgeInsets.all(20),
@@ -348,7 +350,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
               if (isCaregiver)
                 Row(
                   children: [
-                    IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF2563EB)), onPressed: () => _showNewReportModal(patientId, existingReport: report)),
+                    IconButton(icon: const Icon(Icons.edit_outlined, size: 18, color: Color(0xFF075DBB)), onPressed: () => _showNewReportModal(patientId, existingReport: report)),
                     IconButton(icon: const Icon(Icons.delete_outline, size: 18, color: Color(0xFFEF4444)), onPressed: () => _confirmDeleteReport(report.id, patientId)),
                   ],
                 ),
@@ -361,7 +363,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
             children: [
               CircleAvatar(
                 radius: 12,
-                backgroundColor: const Color(0xFF2563EB),
+                backgroundColor: const Color(0xFF075DBB),
                 backgroundImage: (report.caregiverProfilePhoto != null && report.caregiverProfilePhoto!.isNotEmpty)
                     ? (report.caregiverProfilePhoto!.startsWith('data:image')
                         ? MemoryImage(base64Decode(report.caregiverProfilePhoto!.split(',')[1]))
@@ -445,7 +447,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
           ),
           const SizedBox(height: 12),
           if (report.acknowledgements.isNotEmpty) ...report.acknowledgements.map((ack) => _buildAckItem(ack)),
-          if (isFamily) _buildAcknowledgeInput(report.id),
+          if (isFamily) _buildAcknowledgeInput(report.id, alreadyAcknowledged),
         ],
       ),
     );
@@ -509,7 +511,27 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
     );
   }
 
-  Widget _buildAcknowledgeInput(String reportId) {
+  Widget _buildAcknowledgeInput(String reportId, bool alreadyAcknowledged) {
+    if (alreadyAcknowledged) {
+      return Container(
+        width: double.infinity,
+        margin: const EdgeInsets.only(top: 8),
+        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+        decoration: BoxDecoration(
+          color: const Color(0xFFEAF7ED),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(color: const Color(0xFFB8DFC2)),
+        ),
+        child: const Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(Icons.check_circle_rounded, color: Color(0xFF118A36), size: 20),
+            SizedBox(width: 8),
+            Text('You acknowledged this report', style: TextStyle(color: Color(0xFF118A36), fontWeight: FontWeight.w800)),
+          ],
+        ),
+      );
+    }
     final commentController = TextEditingController();
     return Padding(
       padding: const EdgeInsets.only(top: 8.0),
@@ -544,12 +566,15 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                 ScaffoldMessenger.of(context).showSnackBar(
                   const SnackBar(content: Text('Report acknowledged!'), backgroundColor: Color(0xFF10B981)),
                 );
+              } else if (mounted) {
+                final message = ref.read(familyDashboardProvider).errorMessage ?? 'Unable to acknowledge this report.';
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(message)));
               }
             },
             icon: const Icon(Icons.check, size: 16),
             label: const Text('ACKNOWLEDGE', style: TextStyle(fontWeight: FontWeight.w900, fontSize: 11)),
             style: ElevatedButton.styleFrom(
-              backgroundColor: const Color(0xFF10B981),
+              backgroundColor: const Color(0xFF075DBB),
               foregroundColor: Colors.white,
               padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
               shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(12)),
@@ -761,7 +786,7 @@ class _NewReportModalState extends ConsumerState<_NewReportModal> {
                     : const Icon(Icons.save),
                 label: Text(widget.existingReport == null ? 'SUBMIT REPORT NOW' : 'SAVE CHANGES', style: const TextStyle(fontWeight: FontWeight.w900, letterSpacing: 0.5)),
                 style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF2563EB),
+                  backgroundColor: const Color(0xFF075DBB),
                   padding: const EdgeInsets.symmetric(vertical: 16),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(20)),
                 ),

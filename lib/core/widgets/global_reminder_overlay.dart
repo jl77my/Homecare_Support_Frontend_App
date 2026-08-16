@@ -35,7 +35,7 @@ class GlobalReminderOverlay extends ConsumerWidget {
       child: Material(
         elevation: 12,
         borderRadius: BorderRadius.circular(24),
-        color: const Color(0xFF2563EB),
+        color: const Color(0xFF075DBB),
         child: Container(
           padding: const EdgeInsets.all(16),
           decoration: BoxDecoration(
@@ -67,7 +67,7 @@ class GlobalReminderOverlay extends ConsumerWidget {
                 onPressed: onResolve,
                 style: ElevatedButton.styleFrom(
                   backgroundColor: Colors.white,
-                  foregroundColor: const Color(0xFF2563EB),
+                  foregroundColor: const Color(0xFF075DBB),
                   padding: const EdgeInsets.symmetric(horizontal: 14, vertical: 10),
                   shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(16)),
                 ),
