@@ -12,11 +12,6 @@ class LiveHealthReportCard extends StatelessWidget {
     required this.latestVital,
   });
 
-  int get _stability {
-    final alertCount = latestVital?.alerts.length ?? 0;
-    return (100 - (alertCount * 15)).clamp(0, 100).toInt();
-  }
-
   @override
   Widget build(BuildContext context) {
     final glucose = latestVital?.glucose;
@@ -216,28 +211,7 @@ class LiveHealthReportCard extends StatelessWidget {
                         ),
                         Column(
                           crossAxisAlignment: CrossAxisAlignment.end,
-                          children: [
-                            const Text(
-                              'STABILITY',
-                              style: TextStyle(
-                                fontSize: 9,
-                                fontWeight: FontWeight.w900,
-                                color: Color(0xFF94A3B8),
-                                letterSpacing: 0.8,
-                              ),
-                            ),
-                            Text(
-                              '$_stability%',
-                              style: TextStyle(
-                                fontSize: 18,
-                                fontWeight: FontWeight.w900,
-                                color: _stability < 80
-                                    ? const Color(0xFFEF4444)
-                                    : const Color(0xFF4ADE80),
-                              ),
-                            ),
-                          ],
-                        ),
+                                              ),
                       ],
                     ),
                   ),

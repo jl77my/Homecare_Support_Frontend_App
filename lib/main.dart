@@ -71,7 +71,7 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
     final user = authState.user;
 
     return MaterialApp(
-      title: 'HomeCare Pro',
+      title: 'HomeCare',
       debugShowCheckedModeBanner: false,
       theme: AppTheme.lightTheme,
       home: user == null
@@ -155,8 +155,8 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                           : _buildMainContent(user.role),
                     ),
                   ),
-                  if (user.role.toLowerCase() != 'elderly') const GlobalSosOverlay(),
                   const GlobalReminderOverlay(),
+                  if (user.role.toLowerCase() != 'elderly') const GlobalSosOverlay(),
                 ],
               ),
               floatingActionButton: user.role.toLowerCase() != 'elderly' && _activeTab != 'agent'

@@ -83,11 +83,20 @@ class ElderlyService {
     return _parseResponse(response);
   }
 
-  Future<Map<String, dynamic>> triggerSos({required String token}) async {
+  Future<Map<String, dynamic>> triggerSos({
+    required String token,
+    double? latitude,
+    double? longitude,
+    double? accuracy,
+  }) async {
     final response = await _client.post(
       Uri.parse('$_baseUrl/elderly/sos'),
       headers: _headers(token),
-      body: jsonEncode({}),
+      body: jsonEncode({
+        if (latitude != null) 'latitude': latitude,
+        if (longitude != null) 'longitude': longitude,
+        if (accuracy != null) 'accuracy': accuracy,
+      }),
     );
     return _parseResponse(response);
   }

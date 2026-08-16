@@ -3,10 +3,46 @@ import 'package:flutter/foundation.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';   
 import 'package:socket_io_client/socket_io_client.dart' as IO;  
 import 'package:audioplayers/audioplayers.dart'; 
+import 'package:geolocator/geolocator.dart';
 import 'package:shared_preferences/shared_preferences.dart';
 import '../../../core/models/models.dart';   
 import '../../auth/providers/auth_provider.dart';   
 import '../services/elderly_service.dart';   
+
+class SosAlertData {
+  final String alertId;
+  final String elderlyId;
+  final String elderlyName;
+  final double? latitude;
+  final double? longitude;
+  final double? accuracy;
+  final String? triggeredAt;
+
+  const SosAlertData({
+    required this.alertId,
+    required this.elderlyId,
+    required this.elderlyName,
+    this.latitude,
+    this.longitude,
+    this.accuracy,
+    this.triggeredAt,
+  });
+
+  bool get hasLocation => latitude != null && longitude != null;
+
+  factory SosAlertData.fromSocket(dynamic data) {
+    final map = Map<String, dynamic>.from(data as Map);
+    return SosAlertData(
+      alertId: map['alertId']?.toString() ?? '',
+      elderlyId: map['elderlyId']?.toString() ?? '',
+      elderlyName: map['elderlyName']?.toString() ?? 'Elderly user',
+      latitude: (map['latitude'] as num?)?.toDouble(),
+      longitude: (map['longitude'] as num?)?.toDouble(),
+      accuracy: (map['accuracy'] as num?)?.toDouble(),
+      triggeredAt: map['triggeredAt']?.toString(),
+    );
+  }
+}
 
 class ElderlyState {         
   final List<Reminder> reminders;         
@@ -18,6 +54,7 @@ class ElderlyState {
   final bool isLoading;         
   final String? errorMessage;
   final String? activeReminderMessage; 
+  final SosAlertData? activeSosAlert;
 
   const ElderlyState({               
     this.reminders = const [],               
@@ -29,6 +66,7 @@ class ElderlyState {
     this.isLoading = false,               
     this.errorMessage,
     this.activeReminderMessage, 
+    this.activeSosAlert,
   });         
 
   ElderlyState copyWith({               
@@ -43,6 +81,8 @@ class ElderlyState {
     String? activeReminderMessage,
     bool clearError = false,
     bool clearReminder = false, 
+    SosAlertData? activeSosAlert,
+    bool clearSosAlert = false,
   }) {               
     return ElderlyState(                     
       reminders: reminders ?? this.reminders,                     
@@ -54,6 +94,7 @@ class ElderlyState {
       isLoading: isLoading ?? this.isLoading,                     
       errorMessage: clearError ? null : errorMessage ?? this.errorMessage,
       activeReminderMessage: clearReminder ? null : activeReminderMessage ?? this.activeReminderMessage,               
+      activeSosAlert: clearSosAlert ? null : activeSosAlert ?? this.activeSosAlert,
     );
   }
 }
@@ -99,12 +140,22 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     
     _socket = IO.io(socketUrl, IO.OptionBuilder()                  
         .setTransports(['websocket', 'polling'])                  
-        .enableAutoConnect()                  
+        .disableAutoConnect()                  
         .build());          
-    _socket?.connect();     
 
-    _socket?.on('SOS_ALERT_EMITTED', (_) async {
-      state = state.copyWith(isSosActive: true);
+    _socket?.onConnect((_) {
+      final token = _ref.read(authProvider).token;
+      if (token != null) {
+        _socket?.emit('REGISTER_USER', {'token': token});
+      }
+    });
+
+    _socket?.on('SOS_ALERT_EMITTED', (data) async {
+      final role = _ref.read(authProvider).user?.role.toLowerCase();
+      if (role != 'caregiver' && role != 'family') return;
+
+      final alert = SosAlertData.fromSocket(data);
+      state = state.copyWith(isSosActive: true, activeSosAlert: alert);
       
       try {
         await _sosAudioPlayer.setReleaseMode(ReleaseMode.loop);
@@ -130,6 +181,8 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
         }
       }
     });
+
+    _socket?.connect();
   }
 
   Future<void> resolveReminder() async {
@@ -265,8 +318,36 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     final token = _ref.read(authProvider).token;               
     if (token == null) return;               
     state = state.copyWith(isSosActive: true);               
-    try {                     
-      await _service.triggerSos(token: token);               
+    try {
+      Position? position;
+      try {
+        if (await Geolocator.isLocationServiceEnabled()) {
+          var permission = await Geolocator.checkPermission();
+          if (permission == LocationPermission.denied) {
+            permission = await Geolocator.requestPermission();
+          }
+
+          if (permission != LocationPermission.denied &&
+              permission != LocationPermission.deniedForever) {
+            position = await Geolocator.getCurrentPosition(
+              locationSettings: const LocationSettings(
+                accuracy: LocationAccuracy.high,
+                timeLimit: Duration(seconds: 10),
+              ),
+            );
+          }
+        }
+      } catch (e) {
+        // Location must never block an emergency alert.
+        debugPrint('SOS location unavailable: $e');
+      }
+
+      await _service.triggerSos(
+        token: token,
+        latitude: position?.latitude,
+        longitude: position?.longitude,
+        accuracy: position?.accuracy,
+      );               
     } catch (e) {                     
       state = state.copyWith(                           
         isSosActive: false,                           
@@ -281,7 +362,7 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
     } catch (e) {
       debugPrint('Error stopping audio: $e');
     }
-    state = state.copyWith(isSosActive: false);
+    state = state.copyWith(isSosActive: false, clearSosAlert: true);
   }
 
   @override
@@ -310,6 +391,6 @@ class ElderlyNotifier extends StateNotifier<ElderlyState> {
   }
 }
 
-final elderlyProvider = StateNotifierProvider<ElderlyNotifier, ElderlyState>((ref) {         
+final elderlyProvider = StateNotifierProvider.autoDispose<ElderlyNotifier, ElderlyState>((ref) {         
   return ElderlyNotifier(ref.watch(elderlyServiceProvider), ref);   
 });
