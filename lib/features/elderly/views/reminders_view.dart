@@ -130,18 +130,11 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                                       },
                                 ),
                                 
-                              Container(
-                                    padding: const EdgeInsets.all(20),
-                                    decoration: BoxDecoration(
-                                          color: Colors.white,
-                                          borderRadius: BorderRadius.circular(32),
-                                          border: Border.all(color: const Color(0xFFF1F5F9)),
-                                          boxShadow: const [
-                                                BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4)),
-                                          ],
-                                    ),
+                              Padding(
+                                    padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                                     child: Row(
                                           mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                                          crossAxisAlignment: CrossAxisAlignment.center,
                                           children: [
                                                 Column(
                                                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -151,14 +144,10 @@ class _RemindersViewState extends ConsumerState<RemindersView> {
                                                                   style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                                                             ),
                                                             const SizedBox(height: 2),
-                                                            Text(
-                                                                  'Schedule medications, doctor visits & activities',
-                                                                  style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
-                                                            ),
-                                                      ],
+                                                           ],
                                                 ),
                                                 if (!isFamily)
-                                      ElevatedButton.icon(
+                                                      ElevatedButton.icon(
                                                             onPressed: () => _showAddReminderModal(activeElderlyId),
                                                             icon: const Icon(Icons.add, size: 18),
                                                             label: const Text('NEW', style: TextStyle(fontSize: 11, fontWeight: FontWeight.w900)),

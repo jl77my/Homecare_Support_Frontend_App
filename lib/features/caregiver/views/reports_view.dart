@@ -176,18 +176,11 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
               
               _buildMoodBanner(todayMood),
 
-              Container(
-                padding: const EdgeInsets.all(20),
-                decoration: BoxDecoration(
-                  color: Colors.white,
-                  borderRadius: BorderRadius.circular(32),
-                  border: Border.all(color: const Color(0xFFF1F5F9)),
-                  boxShadow: const [
-                    BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4)),
-                  ],
-                ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 4, vertical: 8),
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.center,
                   children: [
                     Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
@@ -197,11 +190,7 @@ class _ReportsViewState extends ConsumerState<ReportsView> {
                           style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                         ),
                         const SizedBox(height: 2),
-                        Text(
-                          'Detailed daily logs, photos & injury updates',
-                          style: TextStyle(fontSize: 12, fontWeight: FontWeight.w600, color: Colors.grey.shade600),
-                        ),
-                      ],
+                       ],
                     ),
                     if (isCaregiver)
                       ElevatedButton.icon(

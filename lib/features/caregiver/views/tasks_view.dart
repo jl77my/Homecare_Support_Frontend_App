@@ -110,19 +110,11 @@ class _TasksViewState extends ConsumerState<TasksView> {
                         },
                     ),
 
-                    Container(
-                        margin: const EdgeInsets.symmetric(horizontal: 16),
-                        padding: const EdgeInsets.all(20),
-                        decoration: BoxDecoration(
-                            color: Colors.white,
-                            borderRadius: BorderRadius.circular(32),
-                            border: Border.all(color: const Color(0xFFF1F5F9)),
-                            boxShadow: const [
-                                BoxShadow(color: Color(0x0A000000), blurRadius: 12, offset: Offset(0, 4)),
-                            ],
-                        ),
+                    Padding(
+                        padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
                         child: Row(
                             mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                            crossAxisAlignment: CrossAxisAlignment.center,
                             children: [
                                 Expanded(
                                     child: Column(
@@ -133,11 +125,7 @@ class _TasksViewState extends ConsumerState<TasksView> {
                                                 style: TextStyle(fontSize: 22, fontWeight: FontWeight.w900, color: Color(0xFF0F172A)),
                                             ),
                                             const SizedBox(height: 2),
-                                            Text(
-                                                '$doneCount tasks completed today',
-                                                style: const TextStyle(fontSize: 12, color: Color(0xFF64748B), fontWeight: FontWeight.w600),
-                                            ),
-                                        ],
+                                             ],
                                     ),
                                 ),
                                 ElevatedButton.icon(

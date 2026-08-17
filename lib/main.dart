@@ -107,15 +107,6 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                             mainAxisSize: MainAxisSize.min,
                             children: [
                               Text('HomeCare', style: TextStyle(fontSize: 18, fontWeight: FontWeight.w900)),
-                              Text(
-                                'CONNECTED SENIOR SUPPORT',
-                                style: TextStyle(
-                                  fontSize: 8,
-                                  fontWeight: FontWeight.w900,
-                                  color: Color(0xFF94A3B8),
-                                  letterSpacing: 1.0,
-                                ),
-                              ),
                             ],
                           ),
                         ],
