@@ -142,7 +142,7 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
                     SafeArea(
                       child: Padding(
                         padding: const EdgeInsets.symmetric(horizontal: 16.0),
-                        child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile' && _activeTab != 'account_settings'
+                        child: user.role.toLowerCase() == 'elderly' && _activeTab != 'profile'
                             ? const ElderlyView()
                             : _buildMainContent(user.role),
                       ),
@@ -188,11 +188,7 @@ class _HomeCareAppState extends ConsumerState<HomeCareApp> {
       case 'agent':
         return const AgentChatView();
       case 'profile':
-        return ProfileView(
-          onNavigateToAccountSettings: () => _setActiveTab('account_settings'),
-        );
-      case 'account_settings':
-        return AccountSettingsView(onBack: () => _setActiveTab('profile'));
+        return const ProfileView();
       default:
         return userRole.toLowerCase() == 'family'
             ? FamilyDashboardView(

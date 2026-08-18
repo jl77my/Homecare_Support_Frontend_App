@@ -143,13 +143,14 @@ class ProfileView extends ConsumerWidget {
                   title: const Text('Account Settings', style: TextStyle(fontWeight: FontWeight.w800, fontSize: 14)),
                   trailing: const Icon(Icons.chevron_right, color: Color(0xFF94A3B8)),
                   onTap: () {
-                    if (onNavigateToAccountSettings != null) {
-                      onNavigateToAccountSettings!();
-                    } else {
-                      Navigator.of(context).push(MaterialPageRoute(
-                        builder: (context) => AccountSettingsView(onBack: () => Navigator.pop(context))
-                      ));
-                    }
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (context) => AccountSettingsView(
+                          onBack: () => Navigator.pop(context),
+                        ),
+                      ),
+                    );
                   },
                 ),
                 const Divider(height: 1, indent: 60),
